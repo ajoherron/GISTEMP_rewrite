@@ -61,11 +61,9 @@ def get_GHCN_data(temp_url: str, meta_url: str, start_year: int) -> pd.DataFrame
                 if line.strip():
                     # Extract relevant data
                     # (Using code from GHCNV4Reader())
-                    station_id: str = line[:11]
-                    year: int = int(line[11:15])
-                    values: List[int] = [
-                        int(line[i : i + 5]) for i in range(19, 115, 8)
-                    ]
+                    station_id = line[:11]
+                    year = int(line[11:15])
+                    values = [int(line[i : i + 5]) for i in range(19, 115, 8)]
 
                     # Append data to list
                     formatted_data.append([station_id, year] + values)
