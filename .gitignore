@@ -1,4 +1,5 @@
 # ignore auto-gen vs/nb files
 .vscode
 .ipynb_checkpoints
-
+.env
+__pycache__
