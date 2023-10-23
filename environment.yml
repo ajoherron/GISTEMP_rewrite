@@ -16,3 +16,6 @@ dependencies:
     - requests
     - typing
     - xarray
+    - tqdm
+    - math
+    - itertools
