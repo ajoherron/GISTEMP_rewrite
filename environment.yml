@@ -16,3 +16,4 @@ dependencies:
     - requests
     - typing
     - xarray
+    - tqdm

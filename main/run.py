@@ -12,7 +12,7 @@ parent_dir = os.path.abspath(os.path.join(current_dir, os.pardir))
 sys.path.append(parent_dir)
 
 # Local imports
-from steps import step0
+from steps import step0, step3
 
 def main():
 
@@ -22,9 +22,17 @@ def main():
         dashes: str = "-" * num_dashes
 
         # Execute Step 0
+        # (Collect a dataframe of GHCN data)
         print(f"|{dashes} Running Step 0 {dashes}|")
         step0_output = step0.step0()
         print(step0_output)
+
+        # Execute Step 3
+        # Create the 2x2 grid 
+        # (including station IDs and weights dictionary for each point in grid)
+        print(f"|{dashes} Running Step 3 {dashes}|")
+        step3_output = step3.step3()
+        print(step3_output)
 
     # Handle exceptions
     except Exception as e:
