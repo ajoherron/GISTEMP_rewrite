@@ -17,5 +17,3 @@ dependencies:
     - typing
     - xarray
     - tqdm
-    - math
-    - itertools
