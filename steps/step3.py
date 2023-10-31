@@ -8,13 +8,24 @@ Each cell's values are computed using station records within a 1200km radius.
 '''
 
 # Standard library imports
+import os
+import sys
 import math
 from itertools import product
-from tqdm import tqdm
 
 # 3rd party library imports
 import pandas as pd
 import numpy as np
+from tqdm import tqdm
+
+# Add the parent directory to sys.path
+current_dir = os.path.dirname(__file__)
+parent_dir = os.path.abspath(os.path.join(current_dir, os.pardir))
+sys.path.append(parent_dir)
+
+# Local imports
+from parameters.constants import nearby_station_radius
+
 
 def create_grid():
     '''
@@ -145,9 +156,8 @@ def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
         distance: float = radius * c
             
     except:
-        print(f'lat1: {lat1}, lon1: {lon1}')
-        print(f'lat2: {lat2}, lon2: {lon2}')
-        distance = 1250
+        # Otherwise set the distance just beyond the nearby radius
+        distance = nearby_station_radius + 1
 
     return distance
 
@@ -214,5 +224,5 @@ def step3() -> pd.DataFrame:
     station_df = collect_metadata()
 
     # Find nearby stations for each grid point
-    grid = nearby_stations(grid, station_df, 1200.0)
+    grid = nearby_stations(grid, station_df, nearby_station_radius)
     return grid

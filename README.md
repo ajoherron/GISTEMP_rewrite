@@ -12,6 +12,7 @@ Repository structure:
     * Data
         * NOAA GHCN v4 (meteorological stations)
         * ERSST v5 (ocean areas)
+    * Rules used from dropping data
 * plots
     * Notebooks for explaining GISTEMP & analyzing outputs
 * steps

@@ -127,7 +127,6 @@ def get_GHCN_data(temp_url: str, meta_url: str, start_year: int) -> pd.DataFrame
 
     return df
 
-
 def step0() -> pd.DataFrame:
     """
     Performs the initial data processing steps for the GHCN temperature dataset.

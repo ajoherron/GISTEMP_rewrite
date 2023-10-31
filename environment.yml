@@ -5,15 +5,16 @@ name: gistemp
 channels:
   - conda-forge
 dependencies:
-  # Recommended that xarray is version 2023.7.0 or later
-  # (to avoid issues with reading datasets)
   - python=3.11.*
   - pip
   - pip:
+    # Recommended that xarray is version 2023.7.0 or later
+    # (to avoid issues with reading datasets)
+    - xarray>=2023.7.0
     - pandas
     - numpy
     - matplotlib
     - requests
-    - typing
-    - xarray
     - tqdm
+    - netCDF4
+    - h5py
