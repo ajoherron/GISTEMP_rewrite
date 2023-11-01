@@ -12,8 +12,9 @@ import os
 import sys
 
 # 3rd party imports
-import xarray as xr
 import requests
+import xarray as xr
+from xarray import Dataset
 
 # Add the parent directory to sys.path
 current_dir = os.path.dirname(__file__)
@@ -21,11 +22,11 @@ parent_dir = os.path.abspath(os.path.join(current_dir, os.pardir))
 sys.path.append(parent_dir)
 
 # Local imports
-from parameters.data import ERSST_url
-from parameters.constants import start_date, end_date, baseline_start_date, baseline_end_date
+from parameters.data import ERSST_URL
+from parameters.constants import START_DATE, END_DATE, BASELINE_START_DATE, BASELINE_END_DATE
 
 
-def sst_dataset(url, start, end):
+def sst_dataset(url: str, start: int, end: int) -> Dataset:
     """
     Downloads ERSST data from a given URL, trims it to specified years, and returns it as an xarray dataset.
 
@@ -67,7 +68,7 @@ def sst_dataset(url, start, end):
         print(f"Failed to download ERSST data. Status code: {response.status_code}")
 
 
-def sst_anomaly(ds_ocean, baseline_start, baseline_end):
+def sst_anomaly(ds_ocean: Dataset, baseline_start: str, baseline_end: str) -> Dataset:
     """
     Calculate Sea Surface Temperature (SST) Anomalies.
 
@@ -94,7 +95,7 @@ def sst_anomaly(ds_ocean, baseline_start, baseline_end):
     return ds_ocean_anomaly
 
 
-def step4() -> xr.Dataset:
+def step4() -> Dataset:
     """
     Step 4: Calculate Sea Surface Temperature (SST) Anomalies
 
@@ -106,8 +107,8 @@ def step4() -> xr.Dataset:
         xr.Dataset: A dataset containing Sea Surface Temperature anomalies.
     """
     # Create SST dataset for correct time range
-    ds_ocean = sst_dataset(url=ERSST_url, start=start_date, end=end_date)
+    ds_ocean = sst_dataset(url=ERSST_URL, start=START_DATE, end=END_DATE)
 
     # Calculate SST anomalies using inputted baseline range
-    ds_ocean_anomaly = sst_anomaly(ds_ocean=ds_ocean, baseline_start=baseline_start_date, baseline_end=baseline_end_date)
+    ds_ocean_anomaly = sst_anomaly(ds_ocean=ds_ocean, baseline_start=BASELINE_START_DATE, baseline_end=BASELINE_END_DATE)
     return ds_ocean_anomaly

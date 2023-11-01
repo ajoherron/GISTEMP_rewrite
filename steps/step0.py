@@ -22,8 +22,8 @@ parent_dir = os.path.abspath(os.path.join(current_dir, os.pardir))
 sys.path.append(parent_dir)
 
 # Local imports
-from parameters.data import GHCN_temp_url, GHCN_meta_url
-from parameters.constants import start_year
+from parameters.data import GHCN_TEMP_URL, GHCN_META_URL
+from parameters.constants import START_YEAR
 
 
 def get_GHCN_data(temp_url: str, meta_url: str, start_year: int) -> pd.DataFrame:
@@ -138,5 +138,5 @@ def step0() -> pd.DataFrame:
     processes and formats the data, and returns a DataFrame. The data is first fetched using specified URLs,
     and is returned for further analysis.
     """
-    df_GHCN = get_GHCN_data(GHCN_temp_url, GHCN_meta_url, start_year)
+    df_GHCN = get_GHCN_data(GHCN_TEMP_URL, GHCN_META_URL, START_YEAR)
     return df_GHCN

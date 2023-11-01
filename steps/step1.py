@@ -45,7 +45,7 @@ def filter_coordinates(df: pd.DataFrame) -> pd.DataFrame:
 
     return df_filtered
 
-def filter_by_rules(df):
+def filter_by_rules(df) -> pd.DataFrame:
     """
     Filter a DataFrame based on specified rules provided in a CSV file.
 

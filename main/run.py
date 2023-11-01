@@ -6,16 +6,20 @@ Execute steps of the GISTEMP algorithm.
 import sys
 import os
 
+# 3rd party imports
+from xarray import Dataset
+
 # Add the parent directory to sys.path
 current_dir = os.path.dirname(__file__)
 parent_dir = os.path.abspath(os.path.join(current_dir, os.pardir))
 sys.path.append(parent_dir)
 
 # Local imports
-from steps import step0, step1, step3, step4
+from steps import step0, step1, step3, step4, step5
+from parameters.constants import ANOMALY_START_YEAR, ANOMALY_END_YEAR
 
 
-def main():
+def main() -> Dataset:
 
     try:
         # Formatting for stdout
@@ -45,6 +49,17 @@ def main():
         print(f"|{dashes} Running Step 4 {dashes}|")
         step4_output = step4.step4()
         print(step4_output)
+
+        # Execute Step 5 and return output
+        # (Create dataset of combined land/ocean anomalies)
+        print(f"|{dashes} Running Step 5 {dashes}|")
+        step5_output = step5.step5(df_temperature=step1_output,
+                                   grid=step3_output,
+                                   ds_ocean=step4_output,
+                                   anomaly_start_year=ANOMALY_START_YEAR,
+                                   anomaly_end_year=ANOMALY_END_YEAR)
+        print(step5_output)
+        return step5_output
 
     # Handle exceptions
     except Exception as e:
