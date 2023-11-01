@@ -3,7 +3,7 @@ Step 1: Removal of bad data
 
 Drop or adjust certain records (or parts of records).
 This includes outliers / out of range reports.
-Determined using configuration file (drop_rules.py).
+Determined using configuration file (parameters/drop_rules.csv).
 '''
 
 # Standard library imports
