@@ -1,8 +1,262 @@
 '''
-Step 5: Consolidation of sub-boxes into boxes
+Step 5: Anomaly calculation for land data, combination of land / ocean anomalies into a single dataset
 
-8000 sub-boxes are combined into 80 boxes.
-Ocean data is combined with land data (for coastal boxes).
-Boxes are combined into latitudinal zones (including hemispheric and global zones).
-Annual and seasonal annomalies are computed from monthly anomalies.
+Monthly averages are calculated for individual stations, which are then used to calculate station anomalies.
+Station anomalies are then used to calculate anomaly timeseries for each point in the 2x2 grid.
+Next, this dataframe of gridded anomalies is converted to a dataset (matching the formatting of the ocean dataset).
+Finally, the land / ocean anomaly datasets are combined into a single dataset.
 '''
+
+# 3rd party imports
+import pandas as pd
+import numpy as np
+from tqdm import tqdm
+from xarray import Dataset
+
+
+def calculate_monthly_averages(df: pd.DataFrame, start_year: int, end_year: int) -> pd.DataFrame:
+    """
+    Calculates monthly average temperatures from a DataFrame for the
+    specified year range.
+
+    Parameters:
+    - df (DataFrame): Input DataFrame with temperature data.
+    - start_year (int): Start year for the range of data.
+    - end_year (int): End year for the range of data.
+
+    Returns:
+    - DataFrame: New DataFrame with monthly average temperatures.
+    """
+    
+    # Make dictionary (key: month #, value: series for station/average temperature)
+    monthly_averages = {}
+    for month in range(1, 13):
+        columns_to_average = [f'{month}_{year}' for year in range(start_year, end_year + 1)]
+        monthly_averages[month] = df[columns_to_average].mean(axis=1)
+
+    # Create a DataFrame with the monthly averages
+    monthly_averages_df = pd.DataFrame(monthly_averages)
+    monthly_averages_df.columns = [f'{month}_Average' for month in range(1, 13)]
+    return monthly_averages_df
+
+def calculate_station_anomalies(df: pd.DataFrame, monthly_averages_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Calculate temperature anomalies for a DataFrame by subtracting monthly averages.
+
+    Parameters:
+    - df (DataFrame): Input DataFrame with temperature data.
+    - monthly_averages_df (DataFrame): DataFrame containing monthly average temperatures.
+
+    Returns:
+    - DataFrame: New DataFrame with temperature anomalies.
+    """
+    
+    # Create a copy of input dataframe
+    anomaly_df = df.copy()
+    
+    # Create a tqdm object to track progress
+    for col in tqdm(anomaly_df.columns):
+
+        # Skip the "Latitude" and "Longitude" columns
+        if col in ["Latitude", "Longitude"]:
+            continue
+
+        # Extract the month from the column name
+        month = int(col.split('_')[0])
+
+        # Define the column name for the monthly average
+        monthly_avg_col = f"{month}_Average"
+
+        # Subtract the monthly average from the raw data column
+        anomaly_df[col] = anomaly_df[col] - monthly_averages_df[monthly_avg_col]
+        
+    return anomaly_df
+
+def calculate_grid_anomalies(df: pd.DataFrame, grid: pd.DataFrame) -> pd.DataFrame:
+    """
+    This function takes as input a DataFrame containing station-level temperature anomalies and a grid information DataFrame
+    that provides weights for each station within grid cells. It calculates grid-level temperature anomalies by applying the
+    provided weights to each station's data, summing the weighted anomalies, and replacing zero anomalies with NaN values.
+    The output DataFrame has columns representing grid cells, and additional columns 'Lat' and 'Lon' that indicate the center
+    latitude and longitude of each grid cell.
+
+    Parameters:
+    - df (DataFrame): Input DataFrame with station temperature anomalies.
+    - grid (DataFrame): Grid information DataFrame with station weights.
+
+    Returns:
+    - DataFrame: A new DataFrame containing grid-level temperature anomalies with NaN values for cells with no valid data.
+    """
+
+    # Make copy on input dataframe, drop location columns
+    anomaly_df = df.copy()
+    anomaly_df = anomaly_df.drop(columns=['Latitude', 'Longitude'])
+    
+    # Leaving out location columns
+    exclude_columns = ['Lat', 'Lon']
+
+    # Initialize anomaly list for rows in anomaly dataframe
+    anomaly_dict = {}
+    anomaly_list = []
+    for i in tqdm(range(len(grid))):
+
+        # Create a dataframe of all the stations within 1200km of a
+        station_dict = grid.iloc[i]['Nearby_Stations']
+
+        # Create grid_stations_df by selecting rows for the desired stations
+        grid_stations_df = anomaly_df.loc[anomaly_df.index.isin(station_dict.keys())].copy()
+
+        # Iterate through the station_dict and apply weights to columns
+        for station, weight in station_dict.items():
+            if station not in exclude_columns and station in grid_stations_df.index:
+                grid_stations_df.loc[station] *= weight
+
+        # Calculate average anomaly (add up all rows)
+        grid_anomaly = grid_stations_df.sum()
+        anomaly_list.append(grid_anomaly)
+
+        # Add to anomaly dictionary
+        anomaly_dict[i] = grid_anomaly
+
+    # Create dataframe and set index
+    grid_anomaly = pd.DataFrame(anomaly_list)
+    grid_anomaly = grid_anomaly.rename_axis('grid')
+    
+    # Replace 0.0 with NaN in all columns except 'box_number'
+    grid_anomaly = grid_anomaly.replace(0.0, np.nan)
+
+    # Initialize an empty dictionary to store the mapping
+    box_coord_dict = {}
+
+    # Iterate through the rows of the DataFrame
+    for index, row in grid.iterrows():
+
+        # Get the Center_Latitude and Center_Longitude values
+        center_latitude = row['Lat']
+        center_longitude = row['Lon']
+
+        # Add the mapping to the dictionary
+        box_coord_dict[index] = (center_latitude, center_longitude)
+
+    # Add the "Center_Latitude" and "Center_Longitude" columns based on the dictionary
+    grid_anomaly['Lat'] = grid_anomaly.index.map(lambda x: box_coord_dict[x][0])
+    grid_anomaly['Lon'] = grid_anomaly.index.map(lambda x: box_coord_dict[x][1])    
+    return grid_anomaly
+
+def dataframe_to_dataset(grid_anomaly: pd.DataFrame) -> Dataset:
+    """
+    Convert a DataFrame with temperature data into an xarray Dataset.
+
+    Parameters:
+    - grid_anomaly (DataFrame): Input DataFrame with temperature data, containing columns 'Lat', 'Lon', and columns representing time steps.
+
+    Returns:
+    - Dataset: xarray Dataset with temperature data, indexed by latitude, longitude, and time.
+    """
+
+    # Create copy of input dataframe, rename columns
+    df = grid_anomaly.copy()
+    df = df.rename(columns={'Lat': 'lat', 'Lon': 'lon'})
+
+    # Reshape dataframe into long format
+    df = df.melt(id_vars=['lat', 'lon'], var_name='date', value_name='temp')
+
+    # Get months and years, drop duplicate rows
+    df[['month', 'year']] = df['date'].str.split('_', expand=True).astype(int)
+    df = df.drop_duplicates(subset=['lat', 'lon', 'month', 'year'])
+
+    # Create date column formatted as year-month-01
+    dates = df['year'].astype(str) + '-' + df['month'].astype(str) + '-01'
+
+    # Convert dates to datetime objects
+    datetimes = pd.to_datetime(dates)
+
+    # Remove unnecessary columns
+    df = df.drop(columns=['date', 'month', 'year'])
+
+    # Create new time column using datetime objects
+    df['time'] = pd.to_datetime(datetimes)
+
+    # Set multi-index
+    df = df.set_index(['lat', 'lon', 'time'])
+
+    # Convert pandas dataframe to xarray dataset
+    ds = df.to_xarray()
+    return ds
+
+def combine_land_ocean_anomalies(ds_land: Dataset, ds_ocean: Dataset) -> Dataset:
+    """
+    Combine land and ocean temperature anomalies into a single dataset.
+
+    This function takes two xarray Datasets, one representing land temperature anomalies
+    and the other representing ocean temperature anomalies. It aligns the time range of
+    the land dataset with the ocean dataset and combines them while considering missing
+    values. The result is a single Dataset containing normalized temperature anomalies.
+
+    Parameters:
+    - ds_land (Dataset): xarray Dataset with land temperature anomalies.
+    - ds_ocean (Dataset): xarray Dataset with ocean temperature anomalies.
+
+    Returns:
+    - Dataset: Combined xarray Dataset with normalized temperature anomalies.
+    """
+    
+    # Find the last date from ds_ocean
+    last_date_ocean = ds_ocean['time'].isel(time=-1).values
+
+    # Select the corresponding time range from ds_land
+    ds_land = ds_land.sel(time=slice(None, last_date_ocean))
+
+    # Count NaN values
+    ocean_nan = ds_ocean.isnull().sum(dim='time')
+    land_nan = ds_land.isnull().sum(dim='time')
+
+    # Normalize NaN counts to become weights
+    time_length = len(ds_ocean['time'])
+    ocean_weight = 1 - (ocean_nan / time_length)
+    land_weight = 1 - (land_nan / time_length)
+
+    # Calculate weighted land / ocean data
+    weighted_ocean = ds_ocean * ocean_weight
+    weighted_land = ds_land * land_weight
+
+    # Combine weighted data into single anomaly dataset
+    ds_combined = weighted_land.fillna(0) + weighted_ocean.fillna(0)
+    ds_anomaly = ds_combined.where(ds_combined != 0.0, np.nan)
+    return ds_anomaly
+
+def step5(df_temperature: pd.DataFrame, grid: pd.DataFrame, ds_ocean: Dataset, anomaly_start_year: int, anomaly_end_year: int):
+    """
+    Perform step 5 to create a combined anomaly dataset, using the following substeps:
+    1. Calculate monthly average temperatures.
+    2. Calculate anomalies for each station.
+    3. Calculate anomalies for each point in a 2x2 grid.
+    4. Convert land anomaly data to an xarray dataset.
+    5. Combine land and ocean anomalies to produce a final anomaly dataset.
+
+    Parameters:
+    - df_temperature (DataFrame): Input DataFrame with temperature data.
+    - grid (DataFrame): 2x2 grid information for spatial calculations.
+    - ds_ocean (Dataset): xarray Dataset with ocean temperature anomalies.
+    - anomaly_start_year (int): Start year for the range of temperature anomalies.
+    - anomaly_end_year (int): End year for the range of temperature anomalies.
+
+    Returns:
+    - Dataset: Combined xarray Dataset containing temperature anomalies.
+    """
+
+    # Calculate all monthly averages
+    monthly_averages_df = calculate_monthly_averages(df_temperature, anomaly_start_year, anomaly_end_year)
+
+    # Calculate anomalies for all stations
+    anomaly_df = calculate_station_anomalies(df_temperature, monthly_averages_df)
+
+    # Calculate anomalies for each point in 2x2 grid
+    grid_anomaly = calculate_grid_anomalies(anomaly_df, grid)
+
+    # Convert land anomaly dataframe to dataset
+    ds_land = dataframe_to_dataset(grid_anomaly)
+
+    # Combine land and anomaly datasets into final result dataset
+    ds_anomaly = combine_land_ocean_anomalies(ds_land, ds_ocean)
+    return ds_anomaly

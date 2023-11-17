@@ -24,10 +24,11 @@ parent_dir = os.path.abspath(os.path.join(current_dir, os.pardir))
 sys.path.append(parent_dir)
 
 # Local imports
-from parameters.constants import nearby_station_radius
+from parameters.constants import NEARBY_STATION_RADIUS
+from parameters.constants import EARTH_RADIUS
 
 
-def create_grid():
+def create_grid() -> pd.DataFrame:
     '''
     Create a grid of latitude and longitude values.
 
@@ -51,7 +52,7 @@ def create_grid():
     grid = pd.DataFrame(combinations, columns=['Lat', 'Lon'])
     return grid
 
-def collect_metadata():
+def collect_metadata() -> pd.DataFrame:
     '''
     Collect station metadata from NASA GISS GISTEMP dataset.
 
@@ -70,7 +71,7 @@ def collect_metadata():
                               names=['Station_ID', 'Latitude', 'Longitude', 'Elevation', 'State', 'Name'])
     return station_df
 
-def nearby_stations(grid_df, station_df, max_distance):
+def nearby_stations(grid_df: pd.DataFrame, station_df: pd.DataFrame, max_distance: float, earth_radius: float) -> pd.DataFrame:
     '''
     Identify nearby weather stations for each grid point and calculate their weights.
 
@@ -99,7 +100,9 @@ def nearby_stations(grid_df, station_df, max_distance):
         center_lon = row['Lon']
 
         # Calculate distances for each station in station_df
-        distances = station_df.apply(lambda x: haversine_distance(center_lat, center_lon, x['Latitude'], x['Longitude']), axis=1)
+        distances = station_df.apply(lambda x: haversine_distance(center_lat, center_lon,
+                                                                  x['Latitude'], x['Longitude'],
+                                                                  earth_radius, max_distance), axis=1)
 
         # Find station IDs within the specified radius
         nearby_stations = station_df[distances <= max_distance]
@@ -123,7 +126,9 @@ def nearby_stations(grid_df, station_df, max_distance):
     grid_df.index.name = 'Box_Number'
     return grid_df
 
-def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+def haversine_distance(lat1: float, lon1: float,
+                       lat2: float, lon2: float,
+                       earth_radius: float, station_radius: float) -> float:
     """
     Calculate the spherical distance (in kilometers) between two pairs of
     latitude and longitude coordinates using the Haversine formula.
@@ -143,9 +148,6 @@ def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
     lat2 = math.radians(lat2)
     lon2 = math.radians(lon2)
 
-    # Radius of the Earth in kilometers
-    radius: float = 6371.0  # Earth's mean radius
-
     # Haversine formula
     dlat: float = abs(lat2 - lat1)
     dlon: float = abs(lon2 - lon1)
@@ -153,11 +155,11 @@ def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
     try:
         a: float = math.sin(dlat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon/2)**2
         c: float = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-        distance: float = radius * c
+        distance: float = earth_radius * c
             
     except:
         # Otherwise set the distance just beyond the nearby radius
-        distance = nearby_station_radius + 1
+        distance = station_radius + 1
 
     return distance
 
@@ -180,7 +182,7 @@ def linearly_decreasing_weight(distance: float, max_distance: float) -> float:
     weight: float = 1.0 - (distance / max_distance)
     return weight
 
-def normalize_dict_values(d):
+def normalize_dict_values(d: dict) -> dict:
     '''
     Normalize the values of a dictionary to make their sum equal to 1.
 
@@ -224,5 +226,5 @@ def step3() -> pd.DataFrame:
     station_df = collect_metadata()
 
     # Find nearby stations for each grid point
-    grid = nearby_stations(grid, station_df, nearby_station_radius)
+    grid = nearby_stations(grid, station_df, NEARBY_STATION_RADIUS, EARTH_RADIUS)
     return grid
