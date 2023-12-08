@@ -1,6 +1,11 @@
-# ignore auto-gen vs/nb files
+# Ignore auto-gen vs/nb files
 .vscode
 .ipynb_checkpoints
 .env
 .pyc
 __pycache__/
+
+# Ignore results directory and its contents
+/results/
+*.csv
+*.nc

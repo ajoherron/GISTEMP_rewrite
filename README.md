@@ -9,11 +9,17 @@ In your command line interface run:
 
 ```conda env create -f environment.yml```
 
+If a conda environment already exists with the name gistemp, run:
+
+```conda env remove -n -gistemp```
+
 If the environment creation is successful, run:
 
 ```conda activate gistemp```
 
-```python main/run.py ```
+To run the GISTEMP program, run:
+
+```python -m main.run```
 
 Repository structure:
 * docs:

@@ -8,22 +8,10 @@ Inputs include:
 
 # Standard library imports
 import requests
-import sys
-import os
-from typing import List
 
 # 3rd-party library imports
 import pandas as pd
 import numpy as np
-
-# Add the parent directory to sys.path
-current_dir = os.path.dirname(__file__)
-parent_dir = os.path.abspath(os.path.join(current_dir, os.pardir))
-sys.path.append(parent_dir)
-
-# Local imports
-from parameters.data import GHCN_TEMP_URL, GHCN_META_URL
-from parameters.constants import START_YEAR
 
 
 def get_GHCN_data(temp_url: str, meta_url: str, start_year: int) -> pd.DataFrame:
@@ -69,16 +57,14 @@ def get_GHCN_data(temp_url: str, meta_url: str, start_year: int) -> pd.DataFrame
                     formatted_data.append([station_id, year] + values)
 
             # Create DataFrame from formatted data
-            column_names: List[str] = ["Station_ID", "Year"] + [
-                f"{i}" for i in range(1, 13)
-            ]
+            column_names = ["Station_ID", "Year"] + [f"{i}" for i in range(1, 13)]
             df_GHCN = pd.DataFrame(formatted_data, columns=column_names)
 
             # Replace -9999 with NaN
             df_GHCN.replace(-9999, np.nan, inplace=True)
 
             # Convert temperature data to degrees Celsius
-            month_columns: List[str] = [f"{i}" for i in range(1, 13)]
+            month_columns = [f"{i}" for i in range(1, 13)]
             df_GHCN[month_columns] = df_GHCN[month_columns].divide(100)
 
             # Drop all years before start year
@@ -127,7 +113,8 @@ def get_GHCN_data(temp_url: str, meta_url: str, start_year: int) -> pd.DataFrame
 
     return df
 
-def step0() -> pd.DataFrame:
+
+def step0(GHCN_TEMP_URL, GHCN_META_URL, START_YEAR) -> pd.DataFrame:
     """
     Performs the initial data processing steps for the GHCN temperature dataset.
 
