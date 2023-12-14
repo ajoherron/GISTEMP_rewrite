@@ -55,7 +55,7 @@ def calculate_station_anomalies(
     anomaly_df = df.copy()
 
     # Create a tqdm object to track progress
-    for col in tqdm(anomaly_df.columns):
+    for col in tqdm(anomaly_df.columns, desc="Calculating anomalies for GHCN data"):
         # Skip the "Latitude" and "Longitude" columns
         if col in ["Latitude", "Longitude"]:
             continue
@@ -73,6 +73,21 @@ def calculate_station_anomalies(
 
 
 def step3(df, ANOMALY_START_YEAR, ANOMALY_END_YEAR):
+    """
+    Perform Step 3 of the anomaly calculation process.
+
+    Parameters:
+    - df (pd.DataFrame): DataFrame containing temperature data with columns "Station_ID," "Year," "Month," and "Temperature."
+    - ANOMALY_START_YEAR (int): Start year for calculating anomalies.
+    - ANOMALY_END_YEAR (int): End year for calculating anomalies.
+
+    Returns:
+    pd.DataFrame: DataFrame containing temperature anomalies for all stations.
+
+    This function performs the following steps:
+    1. Calculate monthly averages for the specified range of years (ANOMALY_START_YEAR to ANOMALY_END_YEAR).
+    2. Calculate temperature anomalies for all stations based on the monthly averages.
+    """
     # Calculate all monthly averages
     monthly_averages_df = calculate_monthly_averages(
         df=df, start_year=ANOMALY_START_YEAR, end_year=ANOMALY_END_YEAR

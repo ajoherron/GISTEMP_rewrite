@@ -3,75 +3,11 @@ File used for functions shared between multiple steps
 """
 
 # Standard library imports
-import math
+from tqdm import tqdm
 
 # 3rd party imports
 import numpy as np
-
-
-def haversine_distance(
-    lat1: float,
-    lon1: float,
-    lat2: float,
-    lon2: float,
-    earth_radius: float,
-) -> float:
-    """
-    Calculate the spherical distance (in kilometers) between two pairs of
-    latitude and longitude coordinates using the Haversine formula.
-
-    Args:
-        lat1 (float): Latitude of the first point in degrees.
-        lon1 (float): Longitude of the first point in degrees.
-        lat2 (float): Latitude of the second point in degrees.
-        lon2 (float): Longitude of the second point in degrees.
-
-    Returns:
-        float: Spherical distance in kilometers.
-    """
-    # Convert latitude and longitude from degrees to radians
-    lat1 = math.radians(lat1)
-    lon1 = math.radians(lon1)
-    lat2 = math.radians(lat2)
-    lon2 = math.radians(lon2)
-
-    # Haversine formula
-    dlat: float = abs(lat2 - lat1)
-    dlon: float = abs(lon2 - lon1)
-
-    try:
-        a: float = (
-            math.sin(dlat / 2) ** 2
-            + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
-        )
-        c: float = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-        distance: float = earth_radius * c
-
-    except:
-        # Otherwise set the distance just beyond the nearby radius
-        distance = np.inf
-
-    return distance
-
-
-def linearly_decreasing_weight(distance: float, max_distance: float) -> float:
-    """
-    Calculate a linearly decreasing weight based on the given distance
-    and maximum distance.
-
-    Args:
-        distance (float): The distance at which you want to calculate the weight.
-        max_distance (float): The maximum distance at which the weight becomes 0.
-
-    Returns:
-        float: The linearly decreasing weight, ranging from 1 to 0.
-    """
-    # Ensure that distance is within the valid range [0, max_distance]
-    distance: float = max(0, min(distance, max_distance))
-
-    # Calculate the weight as a linear interpolation
-    weight: float = 1.0 - (distance / max_distance)
-    return weight
+import pandas as pd
 
 
 def normalize_dict_values(d: dict) -> dict:
@@ -100,3 +36,75 @@ def normalize_dict_values(d: dict) -> dict:
     else:
         # Handle the case where the total is zero (all values are zero)
         return d  # Return the original dictionary
+
+
+def haversine_distance(
+    lat1: float,
+    lon1: float,
+    lat2: pd.Series,
+    lon2: pd.Series,
+    earth_radius: float,
+) -> pd.Series:
+    """
+    Calculate Haversine distance between two sets of latitude and longitude coordinates.
+
+    Parameters:
+    - lat1 (float): Latitude of the first point in radians.
+    - lon1 (float): Longitude of the first point in radians.
+    - lat2 (pd.Series): Series of latitudes for the second points in radians.
+    - lon2 (pd.Series): Series of longitudes for the second points in radians.
+    - earth_radius (float): Earth's radius in the desired unit.
+
+    Returns:
+    pd.Series: Series of calculated Haversine distances between the first point and each point defined by lat2, lon2.
+
+    This function calculates the Haversine distance between a single point (lat1, lon1)
+    and a set of points defined by lat2 and lon2. The input coordinates should be in radians.
+    The result is a Series containing the distances between the first point and each point defined by lat2, lon2.
+    """
+
+    # Haversine formula
+    dlat = np.abs(lat2 - lat1)
+    dlon = np.abs(lon2 - lon1)
+    a = np.sin(dlat / 2) ** 2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon / 2) ** 2
+    a = np.clip(a, 0, 1)
+    c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
+    distance = earth_radius * c
+
+    return distance
+
+
+def calculate_distances(df_1, df_2, EARTH_RADIUS):
+    """
+    Calculate distances between each grid point and station pair.
+
+    Parameters:
+    - grid_df (pd.DataFrame): DataFrame containing grid coordinates with "Lat" and "Lon" columns.
+    - station_df (pd.DataFrame): DataFrame containing station coordinates with "Latitude" and "Longitude" columns.
+    - EARTH_RADIUS (float): Radius of the Earth in the chosen units (e.g., kilometers or miles).
+
+    Returns:
+    np.ndarray: 2D array of distances where rows represent grid points and columns represent stations.
+    """
+    # Broadcast grid coordinates to match station coordinates
+    lat_1 = np.radians(df_1["Latitude"].values[:, np.newaxis])
+    lon_1 = np.radians(df_1["Longitude"].values[:, np.newaxis])
+    lat_2 = np.radians(df_2["Latitude"].values)
+    lon_2 = np.radians(df_2["Longitude"].values)
+
+    distances = np.empty((len(df_1), len(df_2)))
+
+    # Use tqdm to track progress
+    for i in tqdm(
+        range(len(df_1)),
+        desc="Calculating distances between all grid point/station pairs",
+    ):
+        distances[i, :] = haversine_distance(
+            lat_1[i],
+            lon_1[i],
+            lat_2,
+            lon_2,
+            EARTH_RADIUS,
+        )
+
+    return distances

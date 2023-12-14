@@ -9,6 +9,7 @@ Calculate anomaly of sea surface temperature from the dataset.
 import urllib.request
 import shutil
 import os
+from tqdm import tqdm
 
 # 3rd party imports
 import requests
@@ -38,11 +39,16 @@ def sst_dataset(url: str, start: int, end: int) -> DataArray:
 
     # Check the status code
     if response.status_code == 200:
-        # Download the file from the URL
-        with urllib.request.urlopen(url) as url_response, open(
-            local_file, "wb"
+        # Download the file from the URL with tqdm
+        with tqdm.wrapattr(
+            open(local_file, "wb"),
+            "write",
+            miniters=1,
+            total=int(response.headers.get("content-length", 0)),
+            desc="Downloading ERSST data",
         ) as out_file:
-            shutil.copyfileobj(url_response, out_file)
+            with urllib.request.urlopen(url) as url_response:
+                shutil.copyfileobj(url_response, out_file)
 
         # Load the local file into an xarray dataset
         da_ocean = xr.open_dataset(local_file)
@@ -91,6 +97,15 @@ def sst_anomaly(
 
 
 def add_polar_coordinates(da):
+    """
+    Add polar coordinates to an xarray DataArray, creating NaN values at the poles.
+
+    Parameters:
+    - da (xarray.DataArray): Input DataArray containing values.
+
+    Returns:
+    xarray.DataArray: Modified DataArray with added polar coordinates and NaN values at the poles.
+    """
     # Create new latitude/longitude coordinates with values lat=+/-90, lon=0
     new_lat = xr.DataArray([90.0, -90.0], dims=["lat"], coords={"lat": [90.0, -90.0]})
     new_lon = xr.DataArray([0.0], dims=["lon"], coords={"lon": [0.0]})
@@ -123,6 +138,16 @@ def add_polar_coordinates(da):
 
 
 def remove_ice_values(da, threshold):
+    """
+    Remove ice values from an xarray DataArray by setting values below a threshold to NaN.
+
+    Parameters:
+    - da (xarray.DataArray): Input DataArray containing values to be modified.
+    - threshold (float): Threshold value; values below this threshold will be set to NaN.
+
+    Returns:
+    xarray.DataArray: Modified DataArray with ice values set to NaN.
+    """
     # Count non-NaN values before modification
     valid_values_before = int(np.sum(~np.isnan(da.values)))
 

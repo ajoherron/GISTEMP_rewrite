@@ -26,17 +26,17 @@ def calculate_grid_anomalies(df: pd.DataFrame, grid: pd.DataFrame) -> pd.DataFra
     - DataFrame: A new DataFrame containing grid-level temperature anomalies with NaN values for cells with no valid data.
     """
 
-    # Make copy on input dataframe, drop location columns
+    # Make copy on input dataframe
     anomaly_df = df.copy()
-    anomaly_df = anomaly_df.drop(columns=["Latitude", "Longitude"])
 
-    # Leaving out location columns
-    exclude_columns = ["Lat", "Lon"]
+    # Drop location columns
+    exclude_columns = ["Latitude", "Longitude"]
+    anomaly_df = anomaly_df.drop(columns=exclude_columns)
 
     # Initialize anomaly list for rows in anomaly dataframe
     anomaly_dict = {}
     anomaly_list = []
-    for i in tqdm(range(len(grid))):
+    for i in tqdm(range(len(grid)), desc="Calculating anomalies for grid points"):
         # Create a dataframe of all the stations within 1200km of a
         station_dict = grid.iloc[i]["Nearby_Stations"]
 
@@ -70,15 +70,15 @@ def calculate_grid_anomalies(df: pd.DataFrame, grid: pd.DataFrame) -> pd.DataFra
     # Iterate through the rows of the DataFrame
     for index, row in grid.iterrows():
         # Get the Center_Latitude and Center_Longitude values
-        center_latitude = row["Lat"]
-        center_longitude = row["Lon"]
+        center_latitude = row["Latitude"]
+        center_longitude = row["Longitude"]
 
         # Add the mapping to the dictionary
         box_coord_dict[index] = (center_latitude, center_longitude)
 
     # Add the "Center_Latitude" and "Center_Longitude" columns based on the dictionary
-    grid_anomaly["Lat"] = grid_anomaly.index.map(lambda x: box_coord_dict[x][0])
-    grid_anomaly["Lon"] = grid_anomaly.index.map(lambda x: box_coord_dict[x][1])
+    grid_anomaly["Latitude"] = grid_anomaly.index.map(lambda x: box_coord_dict[x][0])
+    grid_anomaly["Longitude"] = grid_anomaly.index.map(lambda x: box_coord_dict[x][1])
     return grid_anomaly
 
 
@@ -95,7 +95,7 @@ def dataframe_to_dataset(grid_anomaly: pd.DataFrame) -> Dataset:
 
     # Create copy of input dataframe, rename columns
     df = grid_anomaly.copy()
-    df = df.rename(columns={"Lat": "lat", "Lon": "lon"})
+    df = df.rename(columns={"Latitude": "lat", "Longitude": "lon"})
 
     # Reshape dataframe into long format
     df = df.melt(id_vars=["lat", "lon"], var_name="date", value_name="temp")

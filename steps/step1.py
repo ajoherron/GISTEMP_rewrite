@@ -8,6 +8,7 @@ Determined using configuration file (parameters/drop_rules.csv).
 
 # Standard library imports
 import os
+from tqdm import tqdm
 
 # 3rd party imports
 import pandas as pd
@@ -34,8 +35,8 @@ def filter_coordinates(df: pd.DataFrame) -> pd.DataFrame:
     df_filtered = df.loc[lat_condition & lon_condition]
 
     # Calculate number of rows filtered
-    num_filtered = len(df) - len(df_filtered)
-    print(f"Number of stations removed due to invalid coordinates: {num_filtered}")
+    # num_filtered = len(df) - len(df_filtered)
+    # print(f"Number of stations removed due to invalid coordinates: {num_filtered}")
 
     return df_filtered
 
@@ -60,16 +61,23 @@ def filter_by_rules(df) -> pd.DataFrame:
     dropped_months = 0
 
     # Set path for drop rules file
-    parent_directory = os.path.dirname(os.getcwd())
-    subdirectory_path = "GISTEMP_rewrite/parameters/drop_rules.csv"
-    drop_rules_path = os.path.join(parent_directory, subdirectory_path)
+    drop_rules_path = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "parameters", "drop_rules.csv")
+    )
 
     # Read in drop rules csv, create copy of input dataframe
     df_drop_rules = pd.read_csv(drop_rules_path, skipinitialspace=True)
     df_filtered = df.copy()
 
+    # Initialize tqdm with the total number of iterations
+    total_iterations = len(df_drop_rules)
+    progress_bar = tqdm(total=total_iterations, desc="Removing faulty data")
+
     # Read through each row in drop rules dataframe
     for _, row in df_drop_rules.iterrows():
+        # Update progress bar
+        progress_bar.update(1)
+
         # Collect relevant information
         station = row["Station_ID"]
         year_range = row["Omit_Period"]
@@ -117,9 +125,10 @@ def filter_by_rules(df) -> pd.DataFrame:
             df_filtered.loc[station, drop_col] = np.nan
             dropped_months += len(drop_col)
 
-    print(
-        f"Number of monthly data points removed according to drop_rules.csv: {dropped_months}"
-    )
+    # Close progress bar
+    progress_bar.close()
+
+    print(f"Number of data points removed: {dropped_months}")
     return df_filtered
 
 

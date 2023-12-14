@@ -8,6 +8,7 @@ Inputs include:
 
 # Standard library imports
 import requests
+from tqdm import tqdm
 
 # 3rd-party library imports
 import pandas as pd
@@ -43,8 +44,15 @@ def get_GHCN_data(temp_url: str, meta_url: str, start_year: int) -> pd.DataFrame
             # Create a list to store formatted data
             formatted_data = []
 
+            # Initialize tqdm with the total number of iterations
+            total_iterations = len(file_data.split("\n"))
+            progress_bar = tqdm(total=total_iterations, desc="Processing GHCN Data")
+
             # Loop through file data
             for line in file_data.split("\n"):
+                # Update progress bar
+                progress_bar.update(1)
+
                 # Check if line is not empty
                 if line.strip():
                     # Extract relevant data
@@ -55,6 +63,9 @@ def get_GHCN_data(temp_url: str, meta_url: str, start_year: int) -> pd.DataFrame
 
                     # Append data to list
                     formatted_data.append([station_id, year] + values)
+
+            # Close progress bar
+            progress_bar.close()
 
             # Create DataFrame from formatted data
             column_names = ["Station_ID", "Year"] + [f"{i}" for i in range(1, 13)]

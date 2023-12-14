@@ -11,7 +11,7 @@ In your command line interface run:
 
 If a conda environment already exists with the name gistemp, run:
 
-```conda env remove -n -gistemp```
+```conda env update --file environment.yml --prune```
 
 If the environment creation is successful, run:
 

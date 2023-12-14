@@ -21,8 +21,8 @@ from parameters.constants import (
     END_YEAR,
     NEARBY_STATION_RADIUS,
     EARTH_RADIUS,
-    ANOMALY_START_YEAR,
-    ANOMALY_END_YEAR,
+    BASELINE_START_YEAR,
+    BASELINE_END_YEAR,
     URBAN_BRIGHTNESS_THRESHOLD,
     URBAN_NEARBY_RADIUS,
     MIN_NEARBY_RURAL_STATIONS,
@@ -76,8 +76,8 @@ def main() -> Dataset:
         print(f"|{dashes} Running Step 3 {dashes}|")
         step3_output = step3.step3(
             df=step1_output,
-            ANOMALY_START_YEAR=ANOMALY_START_YEAR,
-            ANOMALY_END_YEAR=ANOMALY_END_YEAR,
+            ANOMALY_START_YEAR=BASELINE_START_YEAR,
+            ANOMALY_END_YEAR=BASELINE_END_YEAR,
         )
         step3_filename = "step3_output.csv"
         step3_filepath = os.path.join(results_dir, step3_filename)
@@ -125,6 +125,7 @@ def main() -> Dataset:
         step6_filename = "gistemp_result.nc"
         step6_filepath = os.path.join(results_dir, step6_filename)
         step6_output.to_netcdf(step6_filepath)
+        print("\nGISS surface temperature analysis completed.")
 
         # Stop timer, format duration
         end = time.time()
@@ -132,7 +133,7 @@ def main() -> Dataset:
         hours, remainder = divmod(duration_seconds, 3600)
         minutes, seconds = divmod(remainder, 60)
         print(
-            f"\nTotal execution time: {int(hours)} hours {int(minutes)} minutes {seconds} seconds"
+            f"\nTotal execution time: {int(hours)} hours {int(minutes)} minutes {seconds} seconds\n"
         )
 
     # Handle exceptions
