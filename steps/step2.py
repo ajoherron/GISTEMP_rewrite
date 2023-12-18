@@ -17,8 +17,7 @@ from tqdm import tqdm
 
 # Local imports (tools functions)
 from tools.utilities import (
-    haversine_distance,
-    linearly_decreasing_weight,
+    calculate_distances,
     normalize_dict_values,
 )
 
@@ -47,7 +46,7 @@ def create_grid() -> pd.DataFrame:
     combinations = list(product(lat_values, lon_values)) + polar_coordinates
 
     # Create a DataFrame from the combinations
-    grid = pd.DataFrame(combinations, columns=["Lat", "Lon"])
+    grid = pd.DataFrame(combinations, columns=["Latitude", "Longitude"])
     return grid
 
 
@@ -75,74 +74,44 @@ def collect_metadata() -> pd.DataFrame:
     return station_df
 
 
-def nearby_stations(
-    grid_df: pd.DataFrame,
-    station_df: pd.DataFrame,
-    max_distance: float,
-    earth_radius: float,
-) -> pd.DataFrame:
+def find_nearby_stations(grid_df, station_df, distances, NEARBY_STATION_RADIUS):
     """
-    Identify nearby weather stations for each grid point and calculate their weights.
-
-    This function calculates the nearby weather stations and their corresponding weights for each grid point in the provided
-    grid DataFrame. It uses the Haversine distance formula to find stations within a specified maximum distance from each
-    grid point and computes weights based on the distance. The resulting information is added as a new column in the grid
-    DataFrame.
+    Find nearby stations for each grid point based on specified distance radius.
 
     Parameters:
-        grid_df (pd.DataFrame): A DataFrame containing grid points with 'Lat' and 'Lon' columns.
-        station_df (pd.DataFrame): A DataFrame containing station metadata, including 'Station_ID', 'Latitude',
-            'Longitude'.
-        max_distance (float): The maximum distance (in kilometers) for which stations are considered 'nearby'.
+    - grid_df (pd.DataFrame): DataFrame containing grid coordinates with "Lat" and "Lon" columns.
+    - station_df (pd.DataFrame): DataFrame containing station coordinates with "Latitude" and "Longitude" columns.
+    - distances (np.ndarray): 2D array of distances between each grid point and station pair.
+    - NEARBY_STATION_RADIUS (float): Maximum radius for considering stations as nearby.
 
     Returns:
-        pd.DataFrame: A modified grid DataFrame with an additional 'Nearby_Stations' column containing dictionaries of
-        station IDs and their corresponding weights.
+    pd.DataFrame: Updated grid DataFrame with a new column "Nearby_Stations" containing dictionaries
+                  mapping station IDs to their corresponding weights based on proximity.
     """
+    nearby_dict_list = []
 
-    # Initialize an empty list to store station IDs and weights as dictionaries
-    station_weights_within_radius = []
+    distances[distances > NEARBY_STATION_RADIUS] = np.nan
+    weights = 1.0 - (distances / NEARBY_STATION_RADIUS)
 
-    # Use tqdm to track progress
-    for index, row in tqdm(grid_df.iterrows(), total=len(grid_df), desc="Processing"):
-        center_lat = row["Lat"]
-        center_lon = row["Lon"]
+    for i in tqdm(
+        range(len(grid_df)), desc="Finding nearby stations for each grid point"
+    ):
+        # Find indices of stations within the specified radius
+        valid_indices = np.where(weights[i] <= 1.0)
 
-        # Calculate distances for each station in station_df
-        distances = station_df.apply(
-            lambda x: haversine_distance(
-                center_lat,
-                center_lon,
-                x["Latitude"],
-                x["Longitude"],
-                earth_radius,
-            ),
-            axis=1,
-        )
-
-        # Find station IDs within the specified radius
-        nearby_stations = station_df[distances <= max_distance]
-
-        # Calculate weights for each nearby station
-        weights = nearby_stations.apply(
-            lambda x: linearly_decreasing_weight(distances[x.name], max_distance),
-            axis=1,
-        )
-
-        # Create a dictionary of station IDs and weights
-        station_weights = dict(zip(nearby_stations["Station_ID"], weights))
+        # Create a dictionary using numpy operations
+        nearby_dict = {
+            station_df.iloc[j]["Station_ID"]: weights[i, j] for j in valid_indices[0]
+        }
 
         # Normalize weights to sum to 1
-        station_weights = normalize_dict_values(station_weights)
+        nearby_dict = normalize_dict_values(nearby_dict)
 
-        # Append the dictionary to the result list
-        station_weights_within_radius.append(station_weights)
+        nearby_dict_list.append(nearby_dict)
 
     # Add the list of station IDs and weights as a new column
-    grid_df["Nearby_Stations"] = station_weights_within_radius
+    grid_df["Nearby_Stations"] = nearby_dict_list
 
-    # Set index name
-    grid_df.index.name = "Box_Number"
     return grid_df
 
 
@@ -157,11 +126,16 @@ def step2(NEARBY_STATION_RADIUS, EARTH_RADIUS) -> pd.DataFrame:
     """
 
     # Create 2x2 grid
-    grid = create_grid()
+    grid_df = create_grid()
 
     # Gather station metadata
     station_df = collect_metadata()
 
-    # Find nearby stations for each grid point
-    grid = nearby_stations(grid, station_df, NEARBY_STATION_RADIUS, EARTH_RADIUS)
-    return grid
+    # Create numpy array distances between all grid points / stations
+    distances = calculate_distances(grid_df, station_df, EARTH_RADIUS)
+
+    # Add dictionary of station:weight pairs to grid dataframe
+    grid_df = find_nearby_stations(
+        grid_df, station_df, distances, NEARBY_STATION_RADIUS
+    )
+    return grid_df

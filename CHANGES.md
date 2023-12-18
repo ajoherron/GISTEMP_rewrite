@@ -4,3 +4,4 @@ File for documenting changes/updates from gistemp4.0
 - Shifting from the use of an equal area grid to a 2x2 lat x lon grid
 - Integrating xarray for both ocean data and overall combined land / ocean dataset
 - Restructuring order of steps to more logically follow the data structures and algorithm
+- Using numpy vectorization for speeding up distance calculations

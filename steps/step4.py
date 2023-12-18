@@ -20,8 +20,7 @@ from tqdm import tqdm
 
 # Local imports
 from tools.utilities import (
-    haversine_distance,
-    linearly_decreasing_weight,
+    calculate_distances,
     normalize_dict_values,
 )
 
@@ -115,32 +114,11 @@ def process_inv_file(url: str, i_j_dict: Dict) -> List[Dict]:
     return data
 
 
-def collect_brightness_data(brightness_url: str, meta_url: str) -> pd.DataFrame:
-    """
-    Collects night brightness data and inventory metadata, creating a Pandas DataFrame.
-
-    Parameters:
-    - brightness_url (str): URL for night brightness data.
-    - meta_url (str): URL for inventory metadata.
-
-    Returns:
-    - pd.DataFrame: DataFrame with enriched metadata and brightness values, indexed by Station_ID.
-    """
-    # Create i_j_dict and data dictionary
-    i_j_dict = read_night_file(brightness_url)
-    data = process_inv_file(meta_url, i_j_dict)
-
-    # Create dataframe from data dictionary, set index to station ID
-    df = pd.DataFrame(data)
-    df = df.set_index("Station_ID")
-    return df
-
-
-def add_brightness_data(
+def add_brightness_to_df(
     df: pd.DataFrame, brightness_url: str, meta_url: str
 ) -> pd.DataFrame:
     """
-    Adds brightness data to the input DataFrame.
+    Adds night brightness data to the input DataFrame.
 
     Parameters:
     - df (pd.DataFrame): Input DataFrame containing temperature data.
@@ -148,95 +126,88 @@ def add_brightness_data(
     - meta_url (str): URL for inventory metadata.
 
     Returns:
-    - pd.DataFrame: Input DataFrame with added brightness data.
+    - pd.DataFrame: Input DataFrame with added night brightness data.
     """
 
-    # Gather brightness data
-    brightness_df = collect_brightness_data(brightness_url, meta_url)
+    # Create i_j_dict and data dictionary
+    i_j_dict = read_night_file(brightness_url)
+    data = process_inv_file(meta_url, i_j_dict)
+
+    # Create dataframe from data dictionary, set index to station ID
+    brightness_df = pd.DataFrame(data)
+    brightness_df = brightness_df.set_index("Station_ID")
 
     # Merge with input dataframe
     df = df.merge(brightness_df["Value"], left_index=True, right_index=True)
     return df
 
 
-def calculate_rural_weights(
-    df: pd.DataFrame,
-    brightness_threshold: float,
-    min_nearby_stations: int,
-    earth_radius: float,
-    urban_nearby_radius: float,
-) -> pd.DataFrame:
+def find_nearby_rural_stations(
+    df,
+    BRIGHTNESS_THRESHOLD,
+    URBAN_NEARBY_RADIUS,
+    MIN_NEARBY_RURAL_STATIONS,
+    EARTH_RADIUS,
+):
     """
-    Calculate weights for nearby rural stations based on brightness threshold.
+    Identify nearby rural stations for urban locations based on brightness and distance.
 
     Parameters:
-    - df (pd.DataFrame): Input DataFrame containing temperature data.
-    - brightness_threshold (float): Threshold for considering stations as urban.
-    - min_nearby_stations (int): Minimum number of nearby rural stations required.
-    - earth_radius (float): Radius of the Earth for distance calculations.
-    - urban_nearby_radius (float): Radius for considering stations as nearby urban stations.
+    - df (pd.DataFrame): DataFrame containing station data, including columns "Latitude," "Longitude," and "Value" (brightness).
+    - BRIGHTNESS_THRESHOLD (float): Threshold value to classify stations as urban (True) or rural (False).
+    - URBAN_NEARBY_RADIUS (float): Radius in the desired units for considering nearby rural stations.
+    - MIN_NEARBY_RURAL_STATIONS (int): Minimum number of nearby rural stations to retain an urban location.
+    - EARTH_RADIUS (float): Earth's radius in the desired units for distance calculation.
 
     Returns:
-    - pd.DataFrame: DataFrame with urban stations and their corresponding rural weights.
+    pd.DataFrame: DataFrame containing urban locations with information on nearby rural stations.
+
+    This function identifies nearby rural stations for each urban location based on brightness and distance.
+    It calculates distances between urban and rural stations, considers nearby stations within the specified radius,
+    and retains urban locations with the minimum required number of nearby rural stations.
     """
     # Add column for urban flag
     df_copy = df.copy()
-    df_copy["Urban"] = df_copy["Value"] > brightness_threshold
+    df_copy["Urban"] = df_copy["Value"] > BRIGHTNESS_THRESHOLD
 
-    # Filter urban stations (where 'Urban' is True)
-    df_urban = df_copy[df_copy["Urban"] == True]
+    # Filter urban and rural dataframes
+    urban_df = df_copy[df_copy["Urban"] == True]
+    rural_df = df_copy[df_copy["Urban"] == False]
 
-    # Filter rural stations (where 'Urban' is False)
-    df_rural = df_copy[df_copy["Urban"] == False]
+    # Calculate all distances between urban and rural stations
+    distances = calculate_distances(urban_df, rural_df, EARTH_RADIUS)
 
-    # Create dataframes for urban/rural coordinates
-    df_urban_meta = df_urban[["Latitude", "Longitude"]]
-    df_rural_meta = df_rural[["Latitude", "Longitude"]]
+    nearby_dict_list = []
 
-    # Initialize list of rural weights
-    rural_weights = []
+    distances[distances > URBAN_NEARBY_RADIUS] = np.nan
+    weights = 1.0 - (distances / URBAN_NEARBY_RADIUS)
 
-    # Loop through urban station metadata
-    for urban_station_id, urban_row in tqdm(df_urban_meta.iterrows()):
-        # Collect urban coordinates
-        urban_lat = urban_row["Latitude"]
-        urban_lon = urban_row["Longitude"]
+    for i in tqdm(
+        range(len(urban_df)), desc="Finding nearby stations for each grid point"
+    ):
+        # Find indices of stations within the specified radius
+        valid_indices = np.where(weights[i] <= 1.0)
 
-        # Find all rural stations within given radius of urban station, add to dictionary
-        distances = df_rural_meta.apply(
-            lambda x: haversine_distance(
-                urban_lat,
-                urban_lon,
-                x["Latitude"],
-                x["Longitude"],
-                earth_radius=earth_radius,
-            ),
-            axis=1,
-        )
-        rural_within_radius = df_rural_meta[distances <= urban_nearby_radius]
-
-        # Creat dictionary of Station IDs and weights
-        weights = rural_within_radius.apply(
-            lambda x: linearly_decreasing_weight(
-                distances[x.name], urban_nearby_radius
-            ),
-            axis=1,
-        )
-        weights_dict = dict(zip(rural_within_radius.index, weights))
+        # Create a dictionary using numpy operations
+        nearby_dict = {rural_df.index[j]: weights[i, j] for j in valid_indices[0]}
 
         # Normalize weights to sum to 1
-        normalized_weights = normalize_dict_values(weights_dict)
+        nearby_dict = normalize_dict_values(nearby_dict)
 
-        # Append dictionary to result list
-        rural_weights.append(normalized_weights)
+        nearby_dict_list.append(nearby_dict)
 
-    # Create dataframe for urban stations with minimum number of nearby rural stations
-    df_urban_valid = df_urban.copy()
-    df_urban_valid["Rural_Station_Weights"] = rural_weights
-    df_urban_valid = df_urban_valid[
-        df_urban_valid["Rural_Station_Weights"].apply(len) >= min_nearby_stations
+    # Add the list of station IDs and weights as a new column
+    urban_df_weights = urban_df.copy()
+    urban_df_weights.loc[:, "Rural_Station_Weights"] = nearby_dict_list
+
+    # Drop rows with fewer than minimum number of nearby rural stations
+    urban_df_weights = urban_df_weights[
+        urban_df_weights["Rural_Station_Weights"].apply(
+            lambda x: len(x) >= MIN_NEARBY_RURAL_STATIONS
+        )
     ]
-    return df_urban_valid
+
+    return urban_df_weights
 
 
 def adjust_urban_anomalies(
@@ -278,7 +249,12 @@ def adjust_urban_anomalies(
             timeseries_columns.append(column_name)
 
     # Loop through all urban stations with valid number of surrounding rural stations
-    for station, row in tqdm(df_urban_valid.iterrows()):
+    for station, row in tqdm(
+        df_urban_valid.iterrows(),
+        total=len(df_urban_valid),
+        desc="Adjusting urban anomalies",
+        unit="row",
+    ):
         # Collect weights for rural stations for given urban station
         weights_dict = row["Rural_Station_Weights"]
 
@@ -332,19 +308,19 @@ def step4(
     - pd.DataFrame: DataFrame with adjusted temperature anomalies for urban stations.
     """
     # Add brightness data to input dataframe
-    anomaly_with_brightness = add_brightness_data(
+    anomaly_with_brightness = add_brightness_to_df(
         df=df,
         brightness_url=BRIGHTNESS_URL,
         meta_url=GHCN_META_URL,
     )
 
     # Calculate weights for nearby rural stations
-    df_urban_valid = calculate_rural_weights(
-        df=anomaly_with_brightness,
-        brightness_threshold=URBAN_BRIGHTNESS_THRESHOLD,
-        min_nearby_stations=MIN_NEARBY_RURAL_STATIONS,
-        earth_radius=EARTH_RADIUS,
-        urban_nearby_radius=URBAN_NEARBY_RADIUS,
+    df_urban_valid = find_nearby_rural_stations(
+        anomaly_with_brightness,
+        URBAN_BRIGHTNESS_THRESHOLD,
+        URBAN_NEARBY_RADIUS,
+        MIN_NEARBY_RURAL_STATIONS,
+        EARTH_RADIUS,
     )
 
     # Adjust urban anomalies based on weights
