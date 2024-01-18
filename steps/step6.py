@@ -166,25 +166,21 @@ def combine_land_ocean_anomalies(ds_land: Dataset, ds_ocean: Dataset) -> Dataset
     return ds_anomaly
 
 
-def step6(
-    df_adjusted_urban: pd.DataFrame, df_grid: pd.DataFrame, ds_ocean: xr.Dataset
-) -> xr.Dataset:
+def step6(df: pd.DataFrame, df_grid: pd.DataFrame, ds_ocean: xr.Dataset) -> xr.Dataset:
     """
     Perform Step 6 of the analysis, calculating anomalies for each point in a 2x2 grid.
 
     Parameters:
-    - df_adjusted_urban (pd.DataFrame): DataFrame with adjusted temperature anomalies for urban stations.
+    - df (pd.DataFrame): DataFrame with temperature anomalies.
     - df_grid (pd.DataFrame): DataFrame containing information about the 2x2 grid.
     - ds_ocean (xr.Dataset): Dataset containing ocean temperature anomalies.
 
     Returns:
     - xr.Dataset: Combined dataset containing land and ocean temperature anomalies.
     """
-    # Get rid of unnecessary brightness and urban flag columns
-    df_trimmed = df_adjusted_urban.drop(columns=["Value"])
 
     # Calculate anomalies for each point in 2x2 grid
-    grid_anomaly = calculate_grid_anomalies(df=df_trimmed, grid=df_grid)
+    grid_anomaly = calculate_grid_anomalies(df=df, grid=df_grid)
 
     # Convert land anomaly dataframe to dataset
     ds_land = dataframe_to_dataset(grid_anomaly)

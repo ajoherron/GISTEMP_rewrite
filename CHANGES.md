@@ -5,3 +5,4 @@ File for documenting changes/updates from gistemp4.0
 - Integrating xarray for both ocean data and overall combined land / ocean dataset
 - Restructuring order of steps to more logically follow the data structures and algorithm
 - Using numpy vectorization for speeding up distance calculations
+- Added command line arguments, allowing user to change main algorithm parameters

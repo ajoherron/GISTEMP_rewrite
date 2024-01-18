@@ -15,7 +15,9 @@ import pandas as pd
 import numpy as np
 
 
-def get_GHCN_data(temp_url: str, meta_url: str, start_year: int) -> pd.DataFrame:
+def get_GHCN_data(
+    temp_url: str, meta_url: str, start_year: int, end_year: int
+) -> pd.DataFrame:
     """
     Retrieves and formats temperature data from the Global Historical Climatology Network (GHCN) dataset.
 
@@ -78,9 +80,10 @@ def get_GHCN_data(temp_url: str, meta_url: str, start_year: int) -> pd.DataFrame
             month_columns = [f"{i}" for i in range(1, 13)]
             df_GHCN[month_columns] = df_GHCN[month_columns].divide(100)
 
-            # Drop all years before start year
+            # Drop all years before start year & after end year
             start_year_mask = df_GHCN["Year"] >= start_year
-            df_GHCN = df_GHCN.loc[start_year_mask]
+            end_year_mask = df_GHCN["Year"] <= end_year
+            df_GHCN = df_GHCN.loc[start_year_mask & end_year_mask]
 
         else:
             print("Failed to download the file. Status code:", response.status_code)
@@ -125,7 +128,7 @@ def get_GHCN_data(temp_url: str, meta_url: str, start_year: int) -> pd.DataFrame
     return df
 
 
-def step0(GHCN_TEMP_URL, GHCN_META_URL, START_YEAR) -> pd.DataFrame:
+def step0(GHCN_TEMP_URL, GHCN_META_URL, START_YEAR, END_YEAR) -> pd.DataFrame:
     """
     Performs the initial data processing steps for the GHCN temperature dataset.
 
@@ -136,5 +139,5 @@ def step0(GHCN_TEMP_URL, GHCN_META_URL, START_YEAR) -> pd.DataFrame:
     processes and formats the data, and returns a DataFrame. The data is first fetched using specified URLs,
     and is returned for further analysis.
     """
-    df_GHCN = get_GHCN_data(GHCN_TEMP_URL, GHCN_META_URL, START_YEAR)
+    df_GHCN = get_GHCN_data(GHCN_TEMP_URL, GHCN_META_URL, START_YEAR, END_YEAR)
     return df_GHCN
