@@ -14,6 +14,9 @@ from tqdm import tqdm
 import pandas as pd
 import numpy as np
 
+# Local imports (logging configuration)
+from tools.logger import logger
+
 
 def get_GHCN_data(temp_url: str, meta_url: str, start_year: int) -> pd.DataFrame:
     """
@@ -65,7 +68,9 @@ def get_GHCN_data(temp_url: str, meta_url: str, start_year: int) -> pd.DataFrame
                     formatted_data.append([station_id, year] + values)
 
             # Close progress bar
+            logger.info(progress_bar)
             progress_bar.close()
+            
 
             # Create DataFrame from formatted data
             column_names = ["Station_ID", "Year"] + [f"{i}" for i in range(1, 13)]
@@ -83,10 +88,10 @@ def get_GHCN_data(temp_url: str, meta_url: str, start_year: int) -> pd.DataFrame
             df_GHCN = df_GHCN.loc[start_year_mask]
 
         else:
-            print("Failed to download the file. Status code:", response.status_code)
+            logger.error("Failed to download the file. Status code: %s", response.status_code)
 
     except Exception as e:
-        print("An error occurred:", str(e))
+        logger.exception("An error occurred: %s", e)
 
     # Pivot the dataframe on station ID
     pivoted_df = df_GHCN.pivot(index="Station_ID", columns="Year")

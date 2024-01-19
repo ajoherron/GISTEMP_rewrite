@@ -17,6 +17,9 @@ import xarray as xr
 import numpy as np
 from xarray import DataArray
 
+# Local imports (logging configuration)
+from tools.logger import logger
+
 
 def sst_dataset(url: str, start: int, end: int) -> DataArray:
     """
@@ -54,7 +57,7 @@ def sst_dataset(url: str, start: int, end: int) -> DataArray:
         da_ocean = xr.open_dataset(local_file)
 
         # Confirm successful loading
-        print("ERSST data loaded into xarray data array successfully.")
+        logger.info("ERSST data loaded into xarray data array successfully.")
 
         # Remove the local file after loading
         os.remove(local_file)
@@ -64,7 +67,7 @@ def sst_dataset(url: str, start: int, end: int) -> DataArray:
         return da_ocean
 
     else:
-        print(f"Failed to download ERSST data. Status code: {response.status_code}")
+        logger.error(f"Failed to download ERSST data. Status code: {response.status_code}")
 
 
 def sst_anomaly(
@@ -164,7 +167,7 @@ def remove_ice_values(da, threshold):
     percentage_removed = round((num_removed_nan / valid_values_before) * 100, 3)
 
     # Print number / percent of converted data points
-    print(
+    logger.info(
         f"Number of ice values (below {threshold}) converted to NaN:\n{num_removed_nan} ({percentage_removed}% of all data points)"
     )
 

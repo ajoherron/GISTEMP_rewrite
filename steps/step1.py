@@ -14,6 +14,9 @@ from tqdm import tqdm
 import pandas as pd
 import numpy as np
 
+# Local imports (logging configuration)
+from tools.logger import logger
+
 
 def filter_coordinates(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -127,8 +130,8 @@ def filter_by_rules(df) -> pd.DataFrame:
 
     # Close progress bar
     progress_bar.close()
-
-    print(f"Number of data points removed: {dropped_months}")
+    logger.info(progress_bar)
+    logger.info(f"Number of data points removed: {dropped_months}")
     return df_filtered
 
 
