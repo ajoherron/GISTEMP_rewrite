@@ -276,6 +276,9 @@ def adjust_urban_anomalies(
         # Replace urban timeseries with weighted nearby rural station timeseries
         df.loc[station, timeseries_columns] = weighted_timeseries_mean
 
+    # Get rid of values column (match formatting of step 3)
+    df = df.drop(columns=["Value"])
+
     return df
 
 
