@@ -6,6 +6,9 @@ Step 3: Calculation of land anomalies
 import pandas as pd
 from tqdm import tqdm
 
+# Local imports (logging configuration)
+from tools.logger import logger
+
 
 def calculate_monthly_averages(
     df: pd.DataFrame, start_year: int, end_year: int
@@ -55,20 +58,24 @@ def calculate_station_anomalies(
     anomaly_df = df.copy()
 
     # Create a tqdm object to track progress
-    for col in tqdm(anomaly_df.columns, desc="Calculating anomalies for GHCN data"):
-        # Skip the "Latitude" and "Longitude" columns
-        if col in ["Latitude", "Longitude"]:
-            continue
+    with tqdm(anomaly_df.columns, desc="Calculating anomalies for GHCN data") as progress_bar:
+        for col in progress_bar:
+            # Skip the "Latitude" and "Longitude" columns
+            if col in ["Latitude", "Longitude"]:
+                continue
 
-        # Extract the month from the column name
-        month = int(col.split("_")[0])
+            # Extract the month from the column name
+            month = int(col.split("_")[0])
 
-        # Define the column name for the monthly average
-        monthly_avg_col = f"{month}_Average"
+            # Define the column name for the monthly average
+            monthly_avg_col = f"{month}_Average"
 
-        # Subtract the monthly average from the raw data column
-        anomaly_df[col] = anomaly_df[col] - monthly_averages_df[monthly_avg_col]
+            # Subtract the monthly average from the raw data column
+            anomaly_df[col] = anomaly_df[col] - monthly_averages_df[monthly_avg_col]
+            
+            progress_bar.update(1)
 
+    logger.debug(progress_bar)
     return anomaly_df
 
 

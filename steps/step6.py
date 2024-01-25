@@ -9,6 +9,8 @@ import xarray as xr
 from tqdm import tqdm
 from xarray import Dataset
 
+# Local imports (logging configuration)
+from tools.logger import logger
 
 def calculate_grid_anomalies(df: pd.DataFrame, grid: pd.DataFrame) -> pd.DataFrame:
     """
@@ -36,26 +38,29 @@ def calculate_grid_anomalies(df: pd.DataFrame, grid: pd.DataFrame) -> pd.DataFra
     # Initialize anomaly list for rows in anomaly dataframe
     anomaly_dict = {}
     anomaly_list = []
-    for i in tqdm(range(len(grid)), desc="Calculating anomalies for grid points"):
-        # Create a dataframe of all the stations within 1200km of a
-        station_dict = grid.iloc[i]["Nearby_Stations"]
+    with tqdm(range(len(grid)), desc="Calculating anomalies for grid points") as progress_bar:
+        for i in progress_bar:
+            # Create a dataframe of all the stations within 1200km of a
+            station_dict = grid.iloc[i]["Nearby_Stations"]
 
-        # Create grid_stations_df by selecting rows for the desired stations
-        grid_stations_df = anomaly_df.loc[
-            anomaly_df.index.isin(station_dict.keys())
-        ].copy()
+            # Create grid_stations_df by selecting rows for the desired stations
+            grid_stations_df = anomaly_df.loc[
+                anomaly_df.index.isin(station_dict.keys())
+            ].copy()
 
-        # Iterate through the station_dict and apply weights to columns
-        for station, weight in station_dict.items():
-            if station not in exclude_columns and station in grid_stations_df.index:
-                grid_stations_df.loc[station] *= weight
+            # Iterate through the station_dict and apply weights to columns
+            for station, weight in station_dict.items():
+                if station not in exclude_columns and station in grid_stations_df.index:
+                    grid_stations_df.loc[station] *= weight
 
-        # Calculate average anomaly (add up all rows)
-        grid_anomaly = grid_stations_df.sum()
-        anomaly_list.append(grid_anomaly)
+            # Calculate average anomaly (add up all rows)
+            grid_anomaly = grid_stations_df.sum()
+            anomaly_list.append(grid_anomaly)
 
-        # Add to anomaly dictionary
-        anomaly_dict[i] = grid_anomaly
+            # Add to anomaly dictionary
+            anomaly_dict[i] = grid_anomaly
+            progress_bar.update(1)
+        logger.debug(progress_bar)
 
     # Create dataframe and set index
     grid_anomaly = pd.DataFrame(anomaly_list)

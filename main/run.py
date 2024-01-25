@@ -10,6 +10,9 @@ import argparse
 # 3rd party imports
 from xarray import Dataset
 
+# Local imports (logging configuration)
+from tools.logger import logger
+
 # Local imports (step functions)
 from steps import step0, step1, step2, step3, step4, step5, step6
 
@@ -124,7 +127,7 @@ def main() -> Dataset:
 
         # Execute Step 0
         # (Create a dataframe of GHCN data)
-        print(f"|{dashes} Running Step 0 {dashes}|")
+        logger.info(f"|{dashes} Running Step 0 {dashes}|")
         step0_output = step0.step0(GHCN_TEMP_URL, GHCN_META_URL, START_YEAR, END_YEAR)
         step0_filename = "step0_output.csv"
         step0_filepath = os.path.join(results_dir, step0_filename)
@@ -132,7 +135,7 @@ def main() -> Dataset:
 
         # Execute Step 1
         # (Clean data (by coordinates / drop rules file)
-        print(f"|{dashes} Running Step 1 {dashes}|")
+        logger.info(f"|{dashes} Running Step 1 {dashes}|")
         step1_output = step1.step1(step0_output)
         step1_filename = "step1_output.csv"
         step1_filepath = os.path.join(results_dir, step1_filename)
@@ -140,7 +143,7 @@ def main() -> Dataset:
 
         # Execute Step 2
         # (Create the 2x2 grid)
-        print(f"|{dashes} Running Step 2 {dashes}|")
+        logger.info(f"|{dashes} Running Step 2 {dashes}|")
         step2_output = step2.step2(NEARBY_STATION_RADIUS, EARTH_RADIUS)
         step2_filename = "step2_output.csv"
         step2_filepath = os.path.join(results_dir, step2_filename)
@@ -148,7 +151,7 @@ def main() -> Dataset:
 
         # Execute Step 3
         # (Calculate land anomalies)
-        print(f"|{dashes} Running Step 3 {dashes}|")
+        logger.info(f"|{dashes} Running Step 3 {dashes}|")
         step3_output = step3.step3(
             df=step1_output,
             ANOMALY_START_YEAR=BASELINE_START_YEAR,
@@ -161,7 +164,7 @@ def main() -> Dataset:
         # Execute Step 4 if option is set to True
         # (Urban adjustment)
         if URBAN_ADJUSTMENT_OPTION:
-            print(f"|{dashes} Running Step 4 {dashes}|")
+            logger.info(f"|{dashes} Running Step 4 {dashes}|")
             step4_output = step4.step4(
                 df=step3_output,
                 URBAN_BRIGHTNESS_THRESHOLD=URBAN_BRIGHTNESS_THRESHOLD,
@@ -181,7 +184,7 @@ def main() -> Dataset:
 
         # Execute Step 5
         # (Calculate ocean anomalies)
-        print(f"|{dashes} Running Step 5 {dashes}|")
+        logger.info(f"|{dashes} Running Step 5 {dashes}|")
         step5_output = step5.step5(
             ERSST_URL=ERSST_URL,
             START_YEAR=START_YEAR,
@@ -196,27 +199,28 @@ def main() -> Dataset:
 
         # Execute Step 6
         # (Combine land and ocean anomlies)
-        print(f"|{dashes} Running Step 6 {dashes}|")
+        logger.info(f"|{dashes} Running Step 6 {dashes}|")
         step6_output = step6.step6(
             df=step4_output, df_grid=step2_output, ds_ocean=step5_output
         )
         step6_filename = "gistemp_result.nc"
         step6_filepath = os.path.join(results_dir, step6_filename)
         step6_output.to_netcdf(step6_filepath)
+        logger.info(f"File created at {step6_filepath}")
 
         # Stop timer, format duration
         end = time.time()
         duration_seconds = round(end - start)
         hours, remainder = divmod(duration_seconds, 3600)
         minutes, seconds = divmod(remainder, 60)
-        print(
-            f"\nTotal execution time: {int(hours)} hours {int(minutes)} minutes {seconds} seconds"
+        logger.info(
+            f"Total execution time: {int(hours)} hours {int(minutes)} minutes {seconds} seconds\n"
         )
-        print("\nGISS surface temperature analysis completed.\n")
+        logger.info("GISS surface temperature analysis completed.")
 
     # Handle exceptions
     except Exception as e:
-        print(f"An error occurred: {e}")
+        logger.exception(f"An error occurred: {e}")
 
 
 # Main entry point

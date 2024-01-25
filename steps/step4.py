@@ -24,6 +24,8 @@ from tools.utilities import (
     normalize_dict_values,
 )
 
+from tools.logger import logger
+
 
 def read_night_file(url: str) -> Dict:
     """
@@ -181,20 +183,22 @@ def find_nearby_rural_stations(
 
     distances[distances > URBAN_NEARBY_RADIUS] = np.nan
     weights = 1.0 - (distances / URBAN_NEARBY_RADIUS)
+        
+    with tqdm(range(len(urban_df)), desc="Finding nearby stations for each grid point") as progress_bar:
+        for i in progress_bar:
+            # Find indices of stations within the specified radius
+            valid_indices = np.where(weights[i] <= 1.0)
 
-    for i in tqdm(
-        range(len(urban_df)), desc="Finding nearby stations for each grid point"
-    ):
-        # Find indices of stations within the specified radius
-        valid_indices = np.where(weights[i] <= 1.0)
+            # Create a dictionary using numpy operations
+            nearby_dict = {rural_df.index[j]: weights[i, j] for j in valid_indices[0]}
 
-        # Create a dictionary using numpy operations
-        nearby_dict = {rural_df.index[j]: weights[i, j] for j in valid_indices[0]}
+            # Normalize weights to sum to 1
+            nearby_dict = normalize_dict_values(nearby_dict)
 
-        # Normalize weights to sum to 1
-        nearby_dict = normalize_dict_values(nearby_dict)
-
-        nearby_dict_list.append(nearby_dict)
+            nearby_dict_list.append(nearby_dict)
+            progress_bar.update(1)
+        
+        logger.debug(progress_bar)
 
     # Add the list of station IDs and weights as a new column
     urban_df_weights = urban_df.copy()
@@ -249,32 +253,34 @@ def adjust_urban_anomalies(
             timeseries_columns.append(column_name)
 
     # Loop through all urban stations with valid number of surrounding rural stations
-    for station, row in tqdm(
-        df_urban_valid.iterrows(),
+    with tqdm(df_urban_valid.iterrows(),
         total=len(df_urban_valid),
         desc="Adjusting urban anomalies",
         unit="row",
-    ):
-        # Collect weights for rural stations for given urban station
-        weights_dict = row["Rural_Station_Weights"]
+    ) as progress_bar:
+        for station, row in progress_bar:
+            # Collect weights for rural stations for given urban station
+            weights_dict = row["Rural_Station_Weights"]
 
-        # Create dataframe of all nearby rural timeseries
-        rural_stations = list(weights_dict.keys())
-        rural_station_timeseries = df_rural.loc[rural_stations][timeseries_columns]
+            # Create dataframe of all nearby rural timeseries
+            rural_stations = list(weights_dict.keys())
+            rural_station_timeseries = df_rural.loc[rural_stations][timeseries_columns]
 
-        # Multiply normalized weights by corresponding station timeseries
-        weights = list(weights_dict.values())
-        weighted_timeseries = rural_station_timeseries.multiply(weights, axis=0)
+            # Multiply normalized weights by corresponding station timeseries
+            weights = list(weights_dict.values())
+            weighted_timeseries = rural_station_timeseries.multiply(weights, axis=0)
 
-        # Calculate overall timeseries
-        # (Only need to sum since weights are normalized)
-        weighted_timeseries_mean = weighted_timeseries.sum(axis=0)
+            # Calculate overall timeseries
+            # (Only need to sum since weights are normalized)
+            weighted_timeseries_mean = weighted_timeseries.sum(axis=0)
 
-        # Replace 0.0 values with NaN
-        weighted_timeseries_mean = weighted_timeseries_mean.replace(0.000000, np.nan)
+            # Replace 0.0 values with NaN
+            weighted_timeseries_mean = weighted_timeseries_mean.replace(0.000000, np.nan)
 
-        # Replace urban timeseries with weighted nearby rural station timeseries
-        df.loc[station, timeseries_columns] = weighted_timeseries_mean
+            # Replace urban timeseries with weighted nearby rural station timeseries
+            df.loc[station, timeseries_columns] = weighted_timeseries_mean
+        
+        logger.debug(progress_bar)
 
     # Get rid of values column (match formatting of step 3)
     df = df.drop(columns=["Value"])

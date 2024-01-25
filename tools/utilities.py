@@ -9,6 +9,8 @@ from tqdm import tqdm
 import numpy as np
 import pandas as pd
 
+# Local imports (logging configuration)
+from tools.logger import logger
 
 def normalize_dict_values(d: dict) -> dict:
     """
@@ -94,17 +96,15 @@ def calculate_distances(df_1, df_2, EARTH_RADIUS):
 
     distances = np.empty((len(df_1), len(df_2)))
 
-    # Use tqdm to track progress
-    for i in tqdm(
-        range(len(df_1)),
-        desc="Calculating distances between all grid point/station pairs",
-    ):
-        distances[i, :] = haversine_distance(
-            lat_1[i],
-            lon_1[i],
-            lat_2,
-            lon_2,
-            EARTH_RADIUS,
-        )
-
+    with tqdm(range(len(df_1)), desc="Calculating distances between all grid point/station pairs") as progress_bar:
+        for i in progress_bar:
+            distances[i, :] = haversine_distance(
+                lat_1[i],
+                lon_1[i],
+                lat_2,
+                lon_2,
+                EARTH_RADIUS,
+            )
+            progress_bar.update(1)
+        logger.debug(progress_bar)
     return distances

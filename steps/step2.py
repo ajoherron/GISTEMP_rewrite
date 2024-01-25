@@ -20,6 +20,8 @@ from tools.utilities import (
     calculate_distances,
     normalize_dict_values,
 )
+from tools.logger import logger
+
 
 
 def create_grid() -> pd.DataFrame:
@@ -93,25 +95,27 @@ def find_nearby_stations(grid_df, station_df, distances, NEARBY_STATION_RADIUS):
     distances[distances > NEARBY_STATION_RADIUS] = np.nan
     weights = 1.0 - (distances / NEARBY_STATION_RADIUS)
 
-    for i in tqdm(
-        range(len(grid_df)), desc="Finding nearby stations for each grid point"
-    ):
-        # Find indices of stations within the specified radius
-        valid_indices = np.where(weights[i] <= 1.0)
+    with tqdm(range(len(grid_df)), desc="Finding nearby stations for each grid point") as progress_bar:
 
-        # Create a dictionary using numpy operations
-        nearby_dict = {
-            station_df.iloc[j]["Station_ID"]: weights[i, j] for j in valid_indices[0]
-        }
+        for i in progress_bar:
+            # Find indices of stations within the specified radius
+            valid_indices = np.where(weights[i] <= 1.0)
 
-        # Normalize weights to sum to 1
-        nearby_dict = normalize_dict_values(nearby_dict)
+            # Create a dictionary using numpy operations
+            nearby_dict = {
+                station_df.iloc[j]["Station_ID"]: weights[i, j] for j in valid_indices[0]
+            }
 
-        nearby_dict_list.append(nearby_dict)
+            # Normalize weights to sum to 1
+            nearby_dict = normalize_dict_values(nearby_dict)
+            nearby_dict_list.append(nearby_dict)
 
-    # Add the list of station IDs and weights as a new column
-    grid_df["Nearby_Stations"] = nearby_dict_list
+            progress_bar.update(1)
 
+        # Add the list of station IDs and weights as a new column
+        grid_df["Nearby_Stations"] = nearby_dict_list
+
+        logger.debug(progress_bar)
     return grid_df
 
 
