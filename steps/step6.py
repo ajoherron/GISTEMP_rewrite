@@ -60,7 +60,7 @@ def calculate_grid_anomalies(df: pd.DataFrame, grid: pd.DataFrame) -> pd.DataFra
             # Add to anomaly dictionary
             anomaly_dict[i] = grid_anomaly
             progress_bar.update(1)
-        logger.info(progress_bar)
+        logger.debug(progress_bar)
 
     # Create dataframe and set index
     grid_anomaly = pd.DataFrame(anomaly_list)

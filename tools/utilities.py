@@ -106,5 +106,5 @@ def calculate_distances(df_1, df_2, EARTH_RADIUS):
                 EARTH_RADIUS,
             )
             progress_bar.update(1)
-        logger.info(progress_bar)
+        logger.debug(progress_bar)
     return distances

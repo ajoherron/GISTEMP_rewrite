@@ -68,7 +68,7 @@ def get_GHCN_data(temp_url: str, meta_url: str, start_year: int) -> pd.DataFrame
                     formatted_data.append([station_id, year] + values)
 
             # Close progress bar
-            logger.info(progress_bar)
+            logger.debug(progress_bar)
             progress_bar.close()
             
 

@@ -4,8 +4,10 @@
 .env
 .pyc
 __pycache__/
+.DS_Store
 
 # Ignore results directory and its contents
 /results/
+/logs/
 *.csv
 *.nc

@@ -115,7 +115,7 @@ def find_nearby_stations(grid_df, station_df, distances, NEARBY_STATION_RADIUS):
         # Add the list of station IDs and weights as a new column
         grid_df["Nearby_Stations"] = nearby_dict_list
 
-        logger.info(progress_bar)
+        logger.debug(progress_bar)
     return grid_df
 
 

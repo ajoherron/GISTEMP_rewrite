@@ -129,6 +129,7 @@ def main() -> Dataset:
         step6_filepath = os.path.join(results_dir, step6_filename)
         step6_output.to_netcdf(step6_filepath)
         logger.info("GISS surface temperature analysis completed.")
+        logger.info(f"File created at {step6_filepath}")
 
         # Stop timer, format duration
         end = time.time()

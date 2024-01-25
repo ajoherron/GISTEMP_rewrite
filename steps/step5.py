@@ -168,7 +168,7 @@ def remove_ice_values(da, threshold):
 
     # Print number / percent of converted data points
     logger.info(
-        f"Number of ice values (below {threshold}) converted to NaN:\n{num_removed_nan} ({percentage_removed}% of all data points)"
+        f"Number of ice values (below {threshold}) converted to NaN: {num_removed_nan} ({percentage_removed}% of all data points)"
     )
 
     return da_iceless

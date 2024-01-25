@@ -130,7 +130,7 @@ def filter_by_rules(df) -> pd.DataFrame:
 
     # Close progress bar
     progress_bar.close()
-    logger.info(progress_bar)
+    logger.debug(progress_bar)
     logger.info(f"Number of data points removed: {dropped_months}")
     return df_filtered
 
