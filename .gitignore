@@ -8,6 +8,6 @@ __pycache__/
 
 # Ignore results directory and its contents
 /results/
-/logs/
+*.log
 *.csv
 *.nc
