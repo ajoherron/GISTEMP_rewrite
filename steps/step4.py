@@ -282,6 +282,9 @@ def adjust_urban_anomalies(
         
         logger.debug(progress_bar)
 
+    # Get rid of values column (match formatting of step 3)
+    df = df.drop(columns=["Value"])
+
     return df
 
 

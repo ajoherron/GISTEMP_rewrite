@@ -12,3 +12,4 @@ Step implementation progress:
 Status update:
 - Rough draft complete
 - Sped up rough draft over 3x using numpy vectorization
+- Added command line parameters

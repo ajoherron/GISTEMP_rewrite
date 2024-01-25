@@ -21,14 +21,14 @@ from xarray import DataArray
 from tools.logger import logger
 
 
-def sst_dataset(url: str, start: int, end: int) -> DataArray:
+def sst_dataset(url: str, start_year: int, end_year: int) -> DataArray:
     """
     Downloads ERSST data from a given URL, trims it to specified years, and returns it as an xarray dataset.
 
     Args:
     url (str): The URL to download the ERSST data file.
-    start (str): The start date for trimming the dataset (e.g., '1880-01-01').
-    end (str): The end date for trimming the dataset (e.g., '2023-12-31').
+    start (int): The start year for trimming the dataset (e.g., 1880).
+    end (int): The end year for trimming the dataset (e.g., 2023).
 
     Returns:
     xr.Dataset: An xarray data array containing the ERSST data for the specified time range.
@@ -62,8 +62,12 @@ def sst_dataset(url: str, start: int, end: int) -> DataArray:
         # Remove the local file after loading
         os.remove(local_file)
 
+        # Convert baseline start/end years to strings
+        start_date = str(start_year) + "-01-01"
+        end_date = str(end_year) + "-12-01"
+
         # Trim to specified years
-        da_ocean = da_ocean["sst"].sel(time=slice(start, end))
+        da_ocean = da_ocean["sst"].sel(time=slice(start_date, end_date))
         return da_ocean
 
     else:
@@ -71,7 +75,7 @@ def sst_dataset(url: str, start: int, end: int) -> DataArray:
 
 
 def sst_anomaly(
-    da_ocean: DataArray, baseline_start: str, baseline_end: str
+    da_ocean: DataArray, baseline_start_year: int, baseline_end_year: int
 ) -> DataArray:
     """
     Calculate Sea Surface Temperature (SST) Anomalies.
@@ -81,15 +85,18 @@ def sst_anomaly(
 
     Args:
         ds_ocean (xr.DataArray): Input dataset containing Sea Surface Temperature data.
-        baseline_start (str): Start date of the baseline time range (e.g., '1951-01-01').
-        baseline_end (str): End date of the baseline time range (e.g., '1980-12-31').
+        baseline_start (int): Start year of the baseline time range (e.g., 1951).
+        baseline_end (int): End year of the baseline time range (e.g., 1980).
 
     Returns:
         xr.DataArray: A data array containing Sea Surface Temperature anomalies.
     """
+    # Convert baseline start/end years to strings
+    baseline_start_date = str(baseline_start_year) + "-01-01"
+    baseline_end_date = str(baseline_end_year) + "-12-31"
 
     # Create trimmed dataset for baseline years
-    baseline_da = da_ocean.sel(time=slice(baseline_start, baseline_end))
+    baseline_da = da_ocean.sel(time=slice(baseline_start_date, baseline_end_date))
 
     # Calculate monthly averages for each month in baseline time range
     monthly_climatology = baseline_da.groupby("time.month").mean(dim="time")
@@ -176,10 +183,10 @@ def remove_ice_values(da, threshold):
 
 def step5(
     ERSST_URL,
-    START_DATE,
-    END_DATE,
-    BASELINE_START_DATE,
-    BASELINE_END_DATE,
+    START_YEAR,
+    END_YEAR,
+    BASELINE_START_YEAR,
+    BASELINE_END_YEAR,
     SST_CUTOFF_TEMP,
 ) -> DataArray:
     """
@@ -187,7 +194,7 @@ def step5(
 
     This function performs the following steps:
     1. Loads the SST data array for the correct time range from 'sst.mnmean.nc'.
-    2. Calculates SST anomalies using the inputted baseline range from '1951-01-01' to '1980-12-31'.
+    2. Calculates SST anomalies using the inputted baseline range.
     3. Adds two coordinates for the north and south pole.
     4. Converts all ice data to NaN
 
@@ -195,13 +202,13 @@ def step5(
         xr.Dataset: A dataset containing Sea Surface Temperature anomalies.
     """
     # Create SST dataset for correct time range
-    da = sst_dataset(url=ERSST_URL, start=START_DATE, end=END_DATE)
+    da = sst_dataset(url=ERSST_URL, start_year=START_YEAR, end_year=END_YEAR)
 
     # Calculate SST anomalies using inputted baseline range
     da_anomaly = sst_anomaly(
         da_ocean=da,
-        baseline_start=BASELINE_START_DATE,
-        baseline_end=BASELINE_END_DATE,
+        baseline_start_year=BASELINE_START_YEAR,
+        baseline_end_year=BASELINE_END_YEAR,
     )
 
     # Add polar coordinates to anomaly dataset
