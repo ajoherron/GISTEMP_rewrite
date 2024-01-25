@@ -128,7 +128,7 @@ def main() -> Dataset:
         # Execute Step 0
         # (Create a dataframe of GHCN data)
         logger.info(f"|{dashes} Running Step 0 {dashes}|")
-        step0_output = step0.step0(GHCN_TEMP_URL, GHCN_META_URL, START_YEAR)
+        step0_output = step0.step0(GHCN_TEMP_URL, GHCN_META_URL, START_YEAR, END_YEAR)
         step0_filename = "step0_output.csv"
         step0_filepath = os.path.join(results_dir, step0_filename)
         step0_output.to_csv(step0_filepath)
@@ -206,7 +206,6 @@ def main() -> Dataset:
         step6_filename = "gistemp_result.nc"
         step6_filepath = os.path.join(results_dir, step6_filename)
         step6_output.to_netcdf(step6_filepath)
-        logger.info("GISS surface temperature analysis completed.")
         logger.info(f"File created at {step6_filepath}")
 
         # Stop timer, format duration
@@ -217,7 +216,7 @@ def main() -> Dataset:
         logger.info(
             f"Total execution time: {int(hours)} hours {int(minutes)} minutes {seconds} seconds\n"
         )
-        print("\nGISS surface temperature analysis completed.\n")
+        logger.info("GISS surface temperature analysis completed.")
 
     # Handle exceptions
     except Exception as e:
