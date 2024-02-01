@@ -13,15 +13,25 @@ We recommend using a conda environment to manage dependencies and to avoid manua
 
     B. If a conda environment already exists with the name gistemp, run:
 
-    ```conda env update --file environment.yml --prune```
+    ```conda env update -f environment.yml --prune```
 
-2. If the environment creation is successful, run:
+2. Activate environment
 
 ```conda activate gistemp```
 
-3. To run the GISTEMP program, run:
+3. Run the GISTEMP program
 
-```python -m main.run```
+    A. To run GISTEMP with standard parameters & algorithm:
+    
+    ```python -m main.run```
+
+    B. To run GISTEMP with user-set parameters and option of urban adjustment step:
+
+    ```python -m main.run --urban_adjustment_option --start_year 1900 --end_year 2000```
+    
+    C. Lastly, an example of all command line arguments being used:
+
+    ```python -m main.run  --urban_adjustment_option --start_year 1900 --end_year 2000 --baseline_start_year 1940 --baseline_end_year 1960 --nearby_station_radius 1000 --urban_nearby_radius 100 --urban_brightness_threshold 15```
 
 Repository structure:
 * docs:

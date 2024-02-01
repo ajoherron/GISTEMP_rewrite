@@ -47,48 +47,56 @@ def parse_arguments():
     )
     parser.add_argument(
         "--urban_adjustment_option",
-        type=bool,
+        action="store_true",
         default=URBAN_ADJUSTMENT_OPTION,
-        help="Option to include urban adjustment (baseline does not include urban adjustment)",
+        help="This option includes urban adjustment in GISTEMP algorithm "
+        "(baseline does not include urban adjustment).",
     )
     parser.add_argument(
         "--start_year",
         type=int,
         default=START_YEAR,
-        help="Start year for processing data",
+        help="The start year for GISTEMP processing (earliest possible date is 1854).",
     )
     parser.add_argument(
-        "--end_year", type=int, default=END_YEAR, help="End year for processing data"
+        "--end_year",
+        type=int,
+        default=END_YEAR,
+        help="The end year for GISTEMP processing "
+        "(default value is the current date / most recent data).",
     )
     parser.add_argument(
         "--baseline_start_year",
         type=int,
         default=BASELINE_START_YEAR,
-        help="Start year for baseline anomaly period",
+        help="Start year for baseline period from which anomalies are calculated.",
     )
     parser.add_argument(
         "--baseline_end_year",
         type=int,
         default=BASELINE_END_YEAR,
-        help="End year for baseline anomaly period",
+        help="End year for baseline period from which anomalies are calculated.",
     )
     parser.add_argument(
         "--nearby_station_radius",
         type=int,
         default=NEARBY_STATION_RADIUS,
-        help="Radius used for station anomaly calculation",
+        help="For each point in the 2x2 Lat x Lon grid, anomaly data is calculated "
+        "based on a weighted average from all stations within this radius.",
     )
     parser.add_argument(
         "--urban_nearby_radius",
         type=int,
         default=URBAN_NEARBY_RADIUS,
-        help="Radius used for calculating urban adjustment",
+        help="For the urban adjustment step, urban data is discarded, "
+        "and replaced using all surrounding rural data within this radius.",
     )
     parser.add_argument(
         "--urban_brightness_threshold",
         type=int,
         default=URBAN_BRIGHTNESS_THRESHOLD,
-        help="Threshold for brightness above which stations are considered urban",
+        help="The threshold for satellite brightness, "
+        "which is used to determine which stations are urban.",
     )
     return parser.parse_args()
 

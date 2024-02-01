@@ -3,8 +3,10 @@
 .ipynb_checkpoints
 .env
 .pyc
-__pycache__/
 .DS_Store
+.coverage
+.pytest_cache/
+__pycache__/
 
 # Ignore results directory and its contents
 /results/

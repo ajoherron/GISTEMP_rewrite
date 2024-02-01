@@ -72,7 +72,6 @@ def get_GHCN_data(
             # Close progress bar
             logger.debug(progress_bar)
             progress_bar.close()
-            
 
             # Create DataFrame from formatted data
             column_names = ["Station_ID", "Year"] + [f"{i}" for i in range(1, 13)]
@@ -91,7 +90,9 @@ def get_GHCN_data(
             df_GHCN = df_GHCN.loc[start_year_mask & end_year_mask]
 
         else:
-            logger.error("Failed to download the file. Status code: %s", response.status_code)
+            logger.error(
+                "Failed to download the file. Status code: %s", response.status_code
+            )
 
     except Exception as e:
         logger.exception("An error occurred: %s", e)

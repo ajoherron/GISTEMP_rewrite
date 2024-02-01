@@ -8,10 +8,12 @@ import time
 # Set start year and end year (use prior year if currently in January)
 # (This accounts for 1 month lag time for measurements)
 START_YEAR = 1880
-current_time = time.gmtime()
-END_YEAR = (
-    current_time.tm_year if current_time.tm_mon != 1 else current_time.tm_year - 1
-)
+END_YEAR = 2023
+# current_time = time.gmtime()
+# END_YEAR = (
+#    current_time.tm_year if current_time.tm_mon != 1 else current_time.tm_year - 1
+#
+
 
 # Anomaly baseline period (integers)
 BASELINE_START_YEAR = 1961

@@ -12,6 +12,7 @@ from xarray import Dataset
 # Local imports (logging configuration)
 from tools.logger import logger
 
+
 def calculate_grid_anomalies(df: pd.DataFrame, grid: pd.DataFrame) -> pd.DataFrame:
     """
     This function takes as input a DataFrame containing station-level temperature anomalies and a grid information DataFrame
@@ -38,7 +39,9 @@ def calculate_grid_anomalies(df: pd.DataFrame, grid: pd.DataFrame) -> pd.DataFra
     # Initialize anomaly list for rows in anomaly dataframe
     anomaly_dict = {}
     anomaly_list = []
-    with tqdm(range(len(grid)), desc="Calculating anomalies for grid points") as progress_bar:
+    with tqdm(
+        range(len(grid)), desc="Calculating anomalies for grid points"
+    ) as progress_bar:
         for i in progress_bar:
             # Create a dataframe of all the stations within 1200km of a
             station_dict = grid.iloc[i]["Nearby_Stations"]
