@@ -50,12 +50,7 @@ from parameters.constants import (
 # Constants
 TEST_DATA_DIR = "testing/test_data"
 STEP0_TEST_DATA_PATH = os.path.join(TEST_DATA_DIR, "step0_test_data.csv")
-STEP1_TEST_DATA_PATH = os.path.join(TEST_DATA_DIR, "step1_test_data.csv")
-STEP2_TEST_DATA_PATH = os.path.join(TEST_DATA_DIR, "step2_test_data.csv")
 STEP3_TEST_DATA_PATH = os.path.join(TEST_DATA_DIR, "step3_test_data.csv")
-STEP4_TEST_DATA_PATH = os.path.join(TEST_DATA_DIR, "step4_test_data.csv")
-STEP5_TEST_DATA_PATH = os.path.join(TEST_DATA_DIR, "step5_test_data.nc")
-STEP6_TEST_DATA_PATH = os.path.join(TEST_DATA_DIR, "step6_test_data.nc")
 
 
 # Fixture to provide paths to input and expected output files
@@ -63,12 +58,7 @@ STEP6_TEST_DATA_PATH = os.path.join(TEST_DATA_DIR, "step6_test_data.nc")
 def file_paths():
     return {
         "step0": STEP0_TEST_DATA_PATH,
-        "step1": STEP1_TEST_DATA_PATH,
-        "step2": STEP2_TEST_DATA_PATH,
         "step3": STEP3_TEST_DATA_PATH,
-        "step4": STEP4_TEST_DATA_PATH,
-        "step5": STEP5_TEST_DATA_PATH,
-        "step6": STEP6_TEST_DATA_PATH,
     }
 
 
@@ -128,7 +118,8 @@ def test_step3(file_paths):
     # Test that anomaly values in step3 are within reasonable range
     anomaly_max = 30
     anomaly_min = -anomaly_max
-    df1 = pd.read_csv(file_paths["step1"], index_col="Station_ID")
+    df0 = pd.read_csv(file_paths["step0"], index_col="Station_ID")
+    df1 = step1.step1(df0)
     df3 = step3.step3(df1, BASELINE_START_YEAR, BASELINE_END_YEAR)
     anomaly_columns = df3.drop(columns=["Latitude", "Longitude"])
     anomaly_values = anomaly_columns.values.flatten().tolist()
@@ -138,7 +129,10 @@ def test_step3(file_paths):
 
 
 def test_step4(file_paths):
-    df3 = pd.read_csv(file_paths["step3"], index_col="Station_ID")
+    # Load anomaly dataframe from scratch
+    df0 = step0.step0(GHCN_TEMP_URL, GHCN_META_URL, START_YEAR, END_YEAR)
+    df1 = step1.step1(df0)
+    df3 = step3.step3(df1, BASELINE_START_YEAR, BASELINE_END_YEAR)
 
     # Determine which rows are urban/rural
     df_brightness = add_brightness_to_df(
@@ -171,9 +165,8 @@ def test_step4(file_paths):
     assert not df4_urban.equals(df3_urban)
 
 
-# CAUSING NUMPY WARNING
-# @pytest.mark.filterwarnings("ignore::RuntimeWarning")
-def test_step5():
+@pytest.mark.filterwarnings("ignore::RuntimeWarning")
+def test_step5_step6(file_paths):
     # Test that start and end years are correct for ocean data
     ds5 = step5.step5(
         ERSST_URL=ERSST_URL,
@@ -188,12 +181,9 @@ def test_step5():
     assert START_YEAR == min_year
     assert END_YEAR == max_year
 
-
-def test_step6(file_paths):
     # Create final result dataset
     df2 = step2.step2(NEARBY_STATION_RADIUS, EARTH_RADIUS)
     df3 = pd.read_csv(file_paths["step3"], index_col="Station_ID")
-    ds5 = xr.open_dataset(file_paths["step5"])
     ds6 = step6.step6(df=df3, df_grid=df2, ds_ocean=ds5)
 
     # Confirm that output data has same coordinates as step 2 grid
@@ -233,9 +223,9 @@ def test_haversine_distance():
     )
 
 
-def test_calculate_distances():
+def test_calculate_distances(file_paths):
     # Test that this returns a numpy array of dimension n x n
-    df = pd.read_csv("testing/test_data/step0_test_data.csv", index_col="Station_ID")
+    df = pd.read_csv(file_paths["step0"], index_col="Station_ID")
     n = 10
     df_a = df.head(n)
     df_b = df.tail(n)

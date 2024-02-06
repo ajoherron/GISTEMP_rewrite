@@ -13,3 +13,6 @@ __pycache__/
 *.log
 *.csv
 *.nc
+
+# Exclude CSV files in the test data folder
+!/testing/test_data/*.csv
