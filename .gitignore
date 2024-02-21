@@ -3,11 +3,16 @@
 .ipynb_checkpoints
 .env
 .pyc
-__pycache__/
 .DS_Store
+.coverage
+.pytest_cache/
+__pycache__/
 
 # Ignore results directory and its contents
 /results/
 *.log
 *.csv
 *.nc
+
+# Exclude CSV files in the test data folder
+!/testing/test_data/*.csv

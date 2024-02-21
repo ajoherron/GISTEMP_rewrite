@@ -37,10 +37,12 @@ def filter_coordinates(df: pd.DataFrame) -> pd.DataFrame:
     # Apply the conditions using the .loc indexer
     df_filtered = df.loc[lat_condition & lon_condition]
 
-    # Calculate number of rows filtered
-    # num_filtered = len(df) - len(df_filtered)
-    # print(f"Number of stations removed due to invalid coordinates: {num_filtered}")
-
+    # Calculate if there's faulty data, create logging message if so
+    num_filtered = len(df) - len(df_filtered)
+    if num_filtered > 0:
+        logger.warning(
+            f"Number of stations removed due to invalid coordinates: {num_filtered}"
+        )
     return df_filtered
 
 

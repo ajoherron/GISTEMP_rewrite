@@ -12,6 +12,7 @@ import pandas as pd
 # Local imports (logging configuration)
 from tools.logger import logger
 
+
 def normalize_dict_values(d: dict) -> dict:
     """
     Normalize the values of a dictionary to make their sum equal to 1.
@@ -96,7 +97,10 @@ def calculate_distances(df_1, df_2, EARTH_RADIUS):
 
     distances = np.empty((len(df_1), len(df_2)))
 
-    with tqdm(range(len(df_1)), desc="Calculating distances between all grid point/station pairs") as progress_bar:
+    with tqdm(
+        range(len(df_1)),
+        desc="Calculating distances between all grid point/station pairs",
+    ) as progress_bar:
         for i in progress_bar:
             distances[i, :] = haversine_distance(
                 lat_1[i],

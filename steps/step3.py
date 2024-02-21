@@ -58,7 +58,9 @@ def calculate_station_anomalies(
     anomaly_df = df.copy()
 
     # Create a tqdm object to track progress
-    with tqdm(anomaly_df.columns, desc="Calculating anomalies for GHCN data") as progress_bar:
+    with tqdm(
+        anomaly_df.columns, desc="Calculating anomalies for GHCN data"
+    ) as progress_bar:
         for col in progress_bar:
             # Skip the "Latitude" and "Longitude" columns
             if col in ["Latitude", "Longitude"]:
@@ -72,7 +74,7 @@ def calculate_station_anomalies(
 
             # Subtract the monthly average from the raw data column
             anomaly_df[col] = anomaly_df[col] - monthly_averages_df[monthly_avg_col]
-            
+
             progress_bar.update(1)
 
     logger.debug(progress_bar)
