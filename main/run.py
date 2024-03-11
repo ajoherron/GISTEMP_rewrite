@@ -6,6 +6,7 @@ Execute steps of the GISTEMP algorithm.
 import os
 import time
 import argparse
+import shutil
 
 # 3rd party imports
 from xarray import Dataset
@@ -112,6 +113,11 @@ def main() -> Dataset:
         # Start timer
         start = time.time()
 
+        # Remove results directory if it exists
+        results_dir = "results/"
+        if os.path.exists(results_dir):
+            shutil.rmtree("results/")
+
         # Parse command-line arguments
         args = parse_arguments()
 
@@ -144,7 +150,7 @@ def main() -> Dataset:
         # Execute Step 1
         # (Clean data (by coordinates / drop rules file)
         logger.info(f"|{dashes} Running Step 1 {dashes}|")
-        step1_output = step1.step1(step0_output)
+        step1_output = step1.step1(step0_output, START_YEAR, END_YEAR)
         step1_filename = "step1_output.csv"
         step1_filepath = os.path.join(results_dir, step1_filename)
         step1_output.to_csv(step1_filepath)
@@ -162,8 +168,10 @@ def main() -> Dataset:
         logger.info(f"|{dashes} Running Step 3 {dashes}|")
         step3_output = step3.step3(
             df=step1_output,
-            ANOMALY_START_YEAR=BASELINE_START_YEAR,
-            ANOMALY_END_YEAR=BASELINE_END_YEAR,
+            START_YEAR=START_YEAR,
+            END_YEAR=END_YEAR,
+            BASELINE_START_YEAR=BASELINE_START_YEAR,
+            BASELINE_END_YEAR=BASELINE_END_YEAR,
         )
         step3_filename = "step3_output.csv"
         step3_filepath = os.path.join(results_dir, step3_filename)

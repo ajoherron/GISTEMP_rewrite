@@ -5,7 +5,7 @@ GISTEMP (GISS Surface Temperature Analysis) is an estimate of the global surface
 ## Running locally
 We recommend using a conda environment to manage dependencies and to avoid manually installing the required packages. Install Anaconda for your platform [here](https://docs.anaconda.com/anaconda/install/).
 
-1. Create environment
+1. Create environment:
 
     A. In your command line interface run: 
 
@@ -15,11 +15,11 @@ We recommend using a conda environment to manage dependencies and to avoid manua
 
     ```conda env update -f environment.yml --prune```
 
-2. Activate environment
+2. Activate environment:
 
 ```conda activate gistemp```
 
-3. Run the GISTEMP program
+3. Run the GISTEMP program:
 
     A. To run GISTEMP with standard parameters & algorithm:
     
@@ -32,6 +32,10 @@ We recommend using a conda environment to manage dependencies and to avoid manua
     C. Lastly, an example of all command line arguments being used:
 
     ```python -m main.run  --urban_adjustment_option --start_year 1900 --end_year 2000 --baseline_start_year 1940 --baseline_end_year 1960 --nearby_station_radius 1000 --urban_nearby_radius 100 --urban_brightness_threshold 15```
+
+4. Additionally, to run all tests:
+
+```pytest```
 
 Repository structure:
 * docs:
@@ -47,6 +51,6 @@ Repository structure:
 * plots
     * Notebooks for explaining GISTEMP & analyzing outputs
 * steps
-    * Steps 0-5, outlined in docs/overview.txt
+    * Steps 0-6, outlined in docs/overview.txt
 * tools
     * Utility functions used for multiple files
